@@ -141,7 +141,11 @@ if page == "🍼 Quick entry":
             )
             st.success(f"✅ Feeding saved: **{feeding['quantity_ml']} ml** at **{fed_time.strftime('%H:%M')}**")
         except requests.HTTPError as e:
-            st.error(f"API error: {e.response.json().get('detail', str(e))}")
+            try:
+                detail = e.response.json().get("detail", str(e))
+            except Exception:
+                detail = e.response.text or str(e)
+            st.error(f"HTTP {e.response.status_code}: {detail}")
 
     # Today's overview
     st.divider()
@@ -300,10 +304,15 @@ elif page == "🤖 AI Analysis":
                 st.divider()
                 st.markdown(result["analysis"])
             except requests.HTTPError as e:
-                detail = e.response.json().get("detail", str(e))
+                try:
+                    detail = e.response.json().get("detail", str(e))
+                except Exception:
+                    detail = e.response.text or str(e)
                 if e.response.status_code == 404:
                     st.warning(f"⚠️ {detail}")
                 else:
-                    st.error(f"Error: {detail}")
+                    st.error(f"HTTP {e.response.status_code}: {detail}")
+                with st.expander("Raw server response"):
+                    st.code(e.response.text or "(empty)")
             except Exception as e:
                 st.error(f"Unexpected error: {e}")
