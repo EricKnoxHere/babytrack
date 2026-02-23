@@ -6,6 +6,12 @@ Run: streamlit run ui/app.py
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path regardless of how Streamlit is invoked
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from datetime import date, datetime, timedelta
 from typing import Optional
 
