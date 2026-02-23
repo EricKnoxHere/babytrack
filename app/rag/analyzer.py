@@ -17,26 +17,6 @@ logger = logging.getLogger(__name__)
 
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
 MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1024"))
-MOCK_CLAUDE = os.getenv("MOCK_CLAUDE", "false").lower() == "true"
-
-_MOCK_RESPONSE = """### ✅ Positive points
-Feeding frequency and volumes are consistent with WHO recommendations for this age.
-Regular feeding intervals observed throughout the day.
-
-### ⚠️ Points of attention
-No significant deviations detected in this mock analysis.
-Ensure feeding intervals do not exceed 4 hours during the day.
-
-### 💡 Recommendations
-1. Continue current feeding schedule — rhythm looks healthy.
-2. Monitor total daily volume to stay within the 150 ml/kg/day guideline.
-3. Watch for satiety cues — never force the baby to finish a bottle.
-
-### 📊 Summary
-Feeding data for this period appears within normal range for the baby's age.
-
-> ⚠️ *This is a mock response — set `MOCK_CLAUDE=false` and add credits to get real AI analysis.*
-"""
 
 
 def _summarize_feedings(feedings: list[Feeding]) -> str:
@@ -140,11 +120,6 @@ def analyze_feedings(
     Returns:
         Structured markdown text analysis.
     """
-    # Mock mode — skip RAG + Claude entirely
-    if MOCK_CLAUDE:
-        logger.info("MOCK_CLAUDE=true — returning canned response for %s", baby.name)
-        return _MOCK_RESPONSE
-
     # 1. Build the RAG query based on age and feeding type
     age_days = (date.today() - baby.birth_date).days
     feeding_types = {f.feeding_type for f in feedings}
@@ -172,11 +147,16 @@ def analyze_feedings(
     prompt = _build_prompt(baby, feedings, period_label, rag_context)
 
     client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY from environment
-    message = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=MAX_TOKENS,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        message = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.BadRequestError as exc:
+        if "credit balance is too low" in str(exc).lower():
+            raise RuntimeError("No more credit") from exc
+        raise
 
     analysis = message.content[0].text
     logger.info("Analysis generated for %s (%d tokens)", baby.name, message.usage.output_tokens)
