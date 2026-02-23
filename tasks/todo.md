@@ -23,20 +23,19 @@
 
 ---
 
-## Phase 2 — RAG Pipeline
+## Phase 2 — RAG Pipeline ✅
 
 ### Knowledge Base
-- [ ] Télécharger recommandations OMS alimentation nourrisson (PDF)
-- [ ] Télécharger guide SFP (Société Française de Pédiatrie)
-- [ ] Convertir PDFs en markdown avec markdown-converter
-- [ ] Stocker dans `data/docs/`
+- [x] Guides OMS alimentation nourrisson → `data/docs/oms_alimentation_nourrisson.md`
+- [x] Guide SFP (Société Française de Pédiatrie) → `data/docs/sfp_guide_alimentation_nourrisson.md`
+- [x] Stockés en markdown structuré dans `data/docs/`
 
 ### LlamaIndex
-- [ ] Installer dépendances : llama-index, anthropic
-- [ ] Créer `app/rag/indexer.py` — ingestion et indexation des docs
-- [ ] Créer `app/rag/retriever.py` — recherche sémantique
-- [ ] Créer `app/rag/analyzer.py` — analyse biberons via Claude + contexte RAG
-- [ ] Tests : vérifier que les recommandations OMS sont bien retriévées
+- [x] Installer dépendances : llama-index-core, llama-index-llms-anthropic, llama-index-embeddings-huggingface, anthropic
+- [x] Créer `app/rag/indexer.py` — ingestion et indexation (VectorStoreIndex, persistance)
+- [x] Créer `app/rag/retriever.py` — recherche sémantique + format_context
+- [x] Créer `app/rag/analyzer.py` — analyse biberons via Claude + contexte RAG
+- [x] Tests : 18/18 passés (MockEmbedding, mock Anthropic, zéro réseau)
 
 ---
 
