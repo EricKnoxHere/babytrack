@@ -4,6 +4,10 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()  # load .env before anything reads os.getenv()
+
 from fastapi import FastAPI
 
 from app.api.routes import analysis_router, babies_router, feedings_router, health_router
