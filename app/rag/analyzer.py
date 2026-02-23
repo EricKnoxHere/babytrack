@@ -15,7 +15,7 @@ from .retriever import format_context, retrieve_context
 
 logger = logging.getLogger(__name__)
 
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-haiku-20241022")
 MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1024"))
 
 
