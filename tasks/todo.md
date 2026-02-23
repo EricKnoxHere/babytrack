@@ -39,32 +39,32 @@
 
 ---
 
-## Phase 3 — API FastAPI
+## Phase 3 — API FastAPI ✅
 
 ### Endpoints
-- [ ] `POST /babies` — créer un bébé
-- [ ] `POST /feedings` — enregistrer un biberon
-- [ ] `GET /feedings/{baby_id}` — historique biberons
-- [ ] `GET /analysis/{baby_id}` — analyse IA de la journée/semaine
-- [ ] `GET /health` — healthcheck
+- [x] `POST /babies` — créer un bébé
+- [x] `POST /feedings` — enregistrer un biberon
+- [x] `GET /feedings/{baby_id}` — historique biberons (filtres: day, start/end)
+- [x] `GET /analysis/{baby_id}` — analyse IA de la journée/semaine
+- [x] `GET /health` — healthcheck
 
 ### Intégration
-- [ ] Brancher analyzer RAG sur l'endpoint `/analysis`
-- [ ] Gestion des erreurs et validation (Pydantic)
-- [ ] Tests d'intégration API
+- [x] Brancher analyzer RAG sur l'endpoint `/analysis`
+- [x] Gestion des erreurs et validation (Pydantic)
+- [x] Tests d'intégration API (20/20 passent)
 
 ---
 
 ## Phase 4 — UI Streamlit
 
 ### Dashboard
-- [ ] Page d'accueil — saisie biberon rapide
-- [ ] Graphique biberons/jour (quantité et fréquence)
-- [ ] Section analyse IA — résumé quotidien
+- [x] Page d'accueil — saisie biberon rapide
+- [x] Graphique biberons/jour (quantité et fréquence)
+- [x] Section analyse IA — résumé quotidien
 - [ ] Courbe de poids (si données disponibles)
 
 ### Polish portfolio
-- [ ] README.md — architecture RAG documentée avec schéma
+- [x] README.md — architecture RAG documentée avec schéma
 - [ ] Déploiement démo (Render ou Railway, free tier)
 - [ ] Screenshot/GIF pour le portfolio
 
