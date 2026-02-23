@@ -9,17 +9,18 @@ from typing import Any, Optional
 import requests
 
 API_BASE = os.getenv("BABYTRACK_API_URL", "http://localhost:8000")
-TIMEOUT = 10  # seconds
+TIMEOUT = 10          # seconds — fast endpoints
+ANALYSIS_TIMEOUT = 120  # seconds — RAG + Claude can be slow on first run
 
 
-def _get(path: str, params: dict | None = None) -> Any:
-    resp = requests.get(f"{API_BASE}{path}", params=params, timeout=TIMEOUT)
+def _get(path: str, params: dict | None = None, timeout: int = TIMEOUT) -> Any:
+    resp = requests.get(f"{API_BASE}{path}", params=params, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
 
-def _post(path: str, payload: dict) -> Any:
-    resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=TIMEOUT)
+def _post(path: str, payload: dict, timeout: int = TIMEOUT) -> Any:
+    resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
@@ -87,7 +88,7 @@ def get_analysis(
     params: dict = {"period": period}
     if reference_date:
         params["reference_date"] = reference_date.isoformat()
-    return _get(f"/analysis/{baby_id}", params=params)
+    return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
 
 
 # ── Health check ───────────────────────────────────────────────────────────
