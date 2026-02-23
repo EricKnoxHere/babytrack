@@ -19,7 +19,7 @@
 ### CRUD
 - [x] `app/services/baby_service.py` — create, get, update, delete baby
 - [x] `app/services/feeding_service.py` — add_feeding, get_feedings_by_day, get_feedings_by_range
-- [x] Tests unitaires pour les services (tests/) — 19/19 passed
+- [x] Tests unitaires pour les services (tests/) — 21/21 passed
 
 ---
 
