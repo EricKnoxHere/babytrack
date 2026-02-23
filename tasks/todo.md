@@ -8,18 +8,18 @@
 
 ---
 
-## Phase 1 — Data Layer
+## Phase 1 — Data Layer ✅
 
 ### Models
-- [ ] Créer `app/models/baby.py` — modèle Baby (nom, date de naissance, poids initial)
-- [ ] Créer `app/models/feeding.py` — modèle Feeding (timestamp, quantité ml, type biberon/allaitement)
-- [ ] Créer `app/services/database.py` — init SQLite, create_tables()
-- [ ] Écrire migrations initiales
+- [x] Créer `app/models/baby.py` — modèle Baby (nom, date de naissance, poids initial)
+- [x] Créer `app/models/feeding.py` — modèle Feeding (timestamp, quantité ml, type biberon/allaitement)
+- [x] Créer `app/services/database.py` — init SQLite, create_tables()
+- [x] Écrire migrations initiales (CREATE TABLE IF NOT EXISTS dans database.py)
 
 ### CRUD
-- [ ] `app/services/baby_service.py` — create, get, update baby
-- [ ] `app/services/feeding_service.py` — add_feeding, get_feedings_by_day, get_feedings_by_range
-- [ ] Tests unitaires pour les services (tests/)
+- [x] `app/services/baby_service.py` — create, get, update, delete baby
+- [x] `app/services/feeding_service.py` — add_feeding, get_feedings_by_day, get_feedings_by_range
+- [x] Tests unitaires pour les services (tests/) — 19/19 passed
 
 ---
 
@@ -80,4 +80,10 @@
 ---
 
 ## Review
-_(à remplir après chaque phase)_
+
+### Phase 1 — 2026-02-23
+- 19/19 tests unitaires passent (pytest-asyncio, DB en mémoire)
+- Models Pydantic v2 : Baby, BabyCreate, BabyUpdate, Feeding, FeedingCreate, FeedingUpdate
+- Services async aiosqlite : CRUD complet + get_by_day + get_by_range + cascade delete
+- Foreign keys SQLite activées, schéma strict (CHECK constraints)
+- Virtualenv `.venv` avec toutes les dépendances installées
