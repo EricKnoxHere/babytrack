@@ -138,14 +138,31 @@ babytrack/
 
 ---
 
+## ☁️ Déploiement Render
+
+Le repo inclut un `render.yaml` prêt à l'emploi (2 services : API + UI).
+
+```bash
+# 1. Fork le repo sur GitHub
+# 2. Connecter Render à ton compte GitHub
+# 3. "New Blueprint" → pointer sur le repo → Render détecte render.yaml
+# 4. Ajouter la variable d'environnement ANTHROPIC_API_KEY dans le dashboard
+# 5. Deploy !
+```
+
+> ⚠️ Sur le free tier Render, SQLite est éphémère (`/tmp`).
+> Les données sont perdues au redémarrage — suffisant pour une démo portfolio.
+
+---
+
 ## 📌 Roadmap
 
 - [x] Phase 1 — Data Layer (SQLite CRUD)
 - [x] Phase 2 — RAG Pipeline
 - [x] Phase 3 — API FastAPI
 - [x] Phase 4 — UI Streamlit
-- [ ] Déploiement démo (Render / Railway)
-- [ ] Multi-enfants · Suivi sommeil · Auth
+- [x] Config déploiement Render (`render.yaml` + `.env.example`)
+- [ ] Persistence DB (PostgreSQL) · Multi-enfants · Auth
 
 ---
 

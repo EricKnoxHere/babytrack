@@ -61,11 +61,11 @@
 - [x] Page d'accueil — saisie biberon rapide
 - [x] Graphique biberons/jour (quantité et fréquence)
 - [x] Section analyse IA — résumé quotidien
-- [ ] Courbe de poids (si données disponibles)
+- [!] Courbe de poids — nécessite une table weight_entries (post-MVP)
 
 ### Polish portfolio
 - [x] README.md — architecture RAG documentée avec schéma
-- [ ] Déploiement démo (Render ou Railway, free tier)
+- [x] Config déploiement Render (render.yaml + .env.example)
 - [ ] Screenshot/GIF pour le portfolio
 
 ---

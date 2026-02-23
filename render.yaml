@@ -1,0 +1,31 @@
+services:
+  # ── API FastAPI ──────────────────────────────────────────────────────────
+  - type: web
+    name: babytrack-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # à renseigner dans le dashboard Render
+      - key: DATABASE_URL
+        value: /tmp/babytrack.db   # éphémère sur free tier — OK pour démo
+      - key: DOCS_DIR
+        value: data/docs
+      - key: INDEX_DIR
+        value: /tmp/babytrack_index
+      - key: CLAUDE_MODEL
+        value: claude-3-haiku-20240307
+
+  # ── UI Streamlit ─────────────────────────────────────────────────────────
+  - type: web
+    name: babytrack-ui
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run ui/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: BABYTRACK_API_URL
+        fromService:
+          type: web
+          name: babytrack-api
+          property: host
