@@ -1,4 +1,4 @@
-"""Point d'entrée de l'application BabyTrack API."""
+"""BabyTrack API application entry point."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -19,35 +19,35 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialise la base de données et charge l'index RAG au démarrage."""
-    # Base de données
+    """Initialize the database and load the RAG index at startup."""
+    # Database
     await create_tables()
-    logger.info("Tables SQLite initialisées")
+    logger.info("SQLite tables initialized")
 
-    # Index RAG (optionnel — l'analyse tourne sans contexte si absent)
+    # RAG index (optional — analysis works without context if absent)
     index_path = Path(INDEX_DIR)
     try:
         app.state.rag_index = load_index(index_path)
-        logger.info("Index RAG chargé depuis %s", index_path)
+        logger.info("RAG index loaded from %s", index_path)
     except FileNotFoundError:
         app.state.rag_index = None
         logger.warning(
-            "Index RAG absent (%s). L'analyse fonctionnera sans contexte médical. "
-            "Lance `python -m app.rag.indexer` pour le construire.",
+            "RAG index not found (%s). Analysis will run without medical context. "
+            "Run `python -m app.rag.indexer` to build it.",
             index_path,
         )
 
     yield
 
-    # Shutdown — rien à libérer pour l'instant
-    logger.info("BabyTrack API arrêtée")
+    # Shutdown — nothing to release for now
+    logger.info("BabyTrack API stopped")
 
 
 app = FastAPI(
     title="BabyTrack API",
     description=(
-        "API de suivi d'alimentation nourrisson avec analyse IA (Claude + RAG OMS/SFP). "
-        "Projet portfolio — Solutions Architect Anthropic."
+        "Infant feeding tracker API with AI analysis (Claude + WHO/SFP RAG). "
+        "Portfolio project — Solutions Architect Anthropic."
     ),
     version="0.3.0",
     lifespan=lifespan,

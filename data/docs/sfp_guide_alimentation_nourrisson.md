@@ -1,180 +1,180 @@
-# Guide SFP — Alimentation du nourrisson : pratiques et recommandations
+# SFP Guide — Infant Feeding: Practices and Recommendations
 
-Source : Société Française de Pédiatrie (SFP) — Comité de nutrition
-Références : Recommandations françaises, mises à jour 2022
-
----
-
-## 1. Laits infantiles : classifications françaises
-
-### Laits 1er âge (0–6 mois)
-Obligatoires jusqu'à la diversification. Composition réglementée par l'UE.
-- Protéines : 1,8–3 g/100 kcal
-- Lipides : 4,4–6 g/100 kcal
-- Glucides : 9–14 g/100 kcal
-- Enrichis en fer, vitamine D, DHA, ARA
-
-### Laits 2ème âge (6–12 mois)
-- Taux de protéines légèrement supérieur
-- Enrichi en fer (besoins augmentés à partir de 6 mois)
-- Maintenu jusqu'à 12 mois révolus
-
-### Laits de croissance (1–3 ans)
-- Non obligatoires mais recommandés par la SFP
-- Apport en fer et vitamine D supérieur au lait de vache
-- Protéines adaptées (réduction par rapport au lait de vache)
-
-### Laits spéciaux
-- **HA (hypoallergénique)** : protéines partiellement hydrolysées, pour prévention en terrain atopique
-- **AR (anti-régurgitations)** : enrichi en amidon ou caroube, flux plus épais
-- **Sans lactose** : pour intolérance temporaire (gastroentérite)
-- **Hydrolysat extensif / acides aminés** : allergie aux protéines de lait de vache (APLV)
+Source: French Paediatric Society (SFP) — Nutrition Committee
+References: French recommendations, updated 2022
 
 ---
 
-## 2. Préparation et conservation des biberons
+## 1. Infant formulas: French classifications
 
-### Préparation hygiénique
-1. Se laver les mains soigneusement
-2. Stériliser le biberon et la tétine (6 premiers mois)
-3. Verser l'eau tiède dans le biberon en premier (eau du robinet après 1 mois, eau bouillie avant)
-4. Ajouter la poudre (1 mesure rase pour 30 ml d'eau) — toujours eau d'abord
-5. Fermer, agiter doucement
-6. Tester la température sur le poignet (environ 37°C)
+### Stage 1 formula (0–6 months)
+Mandatory until complementary feeding begins. Composition regulated by the EU.
+- Proteins: 1.8–3 g/100 kcal
+- Lipids: 4.4–6 g/100 kcal
+- Carbohydrates: 9–14 g/100 kcal
+- Fortified with iron, vitamin D, DHA, ARA
 
-### Conservation
-- Biberon préparé : consommer dans l'heure (temperature ambiante)
-- Biberon préparé au réfrigérateur (< 4°C) : jusqu'à 24h
-- Eau seule : peut être préparée à l'avance dans les biberons stérilisés
-- Ne jamais réchauffer deux fois
-- Ne jamais utiliser le four à micro-ondes (chauffage non uniforme)
+### Stage 2 formula (6–12 months)
+- Slightly higher protein content
+- Enriched with iron (increased requirements from 6 months)
+- Used until 12 full months
 
----
+### Follow-on milk (1–3 years)
+- Not mandatory but recommended by the SFP
+- Higher iron and vitamin D content than cow's milk
+- Adapted protein levels (reduced compared to cow's milk)
 
-## 3. Fréquences et volumes selon l'âge (SFP)
-
-### Nouveau-né (0–1 mois)
-- 7 à 10 biberons par 24h
-- Volume : 60–90 ml par biberon
-- Espacement : 2–3h, selon la demande
-- Retour au poids de naissance attendu à J10–J14
-
-### Nourrisson 1–3 mois
-- 6 à 8 biberons par 24h
-- Volume : 90–150 ml par biberon
-- Début de régularisation progressive des horaires
-- Ne pas espacer de plus de 4h la nuit avant 3 mois
-
-### Nourrisson 3–6 mois
-- 5 à 6 biberons par 24h
-- Volume : 150–210 ml par biberon
-- Volume journalier : 750–900 ml
-- Possible début de nuit plus longue (5–6h)
-
-### Nourrisson 6–12 mois (avec diversification)
-- 3 à 4 biberons par jour
-- Volume total lait : 500 ml minimum
-- Biberons complémentaires aux repas de diversification
+### Specialised formulas
+- **HA (hypoallergenic)**: partially hydrolysed proteins, for prevention in atopic-risk infants
+- **AR (anti-regurgitation)**: enriched with starch or carob, thicker flow
+- **Lactose-free**: for temporary intolerance (gastroenteritis)
+- **Extensive hydrolysate / amino acids**: for cow's milk protein allergy (CMPA)
 
 ---
 
-## 4. Vitamine D et supplémentation
+## 2. Bottle preparation and storage
 
-### Recommandations SFP (consensus 2022)
-- **Vitamine D** : supplémentation systématique dès la naissance
-  - Allaitement exclusif : 1 000 à 1 200 UI/jour
-  - Biberon (lait enrichi) : 600–800 UI/jour
-  - Forme recommandée : vitamine D3 en solution buvable quotidienne
-- **Vitamine K** : à la naissance (protocole hospitalier), prolongé 3 mois si allaitement exclusif
-- **Fluor** : non recommandé avant 6 mois, discuté selon risque carieux local
+### Hygienic preparation
+1. Wash hands thoroughly
+2. Sterilise the bottle and teat (first 6 months)
+3. Pour lukewarm water into the bottle first (tap water after 1 month, boiled water before)
+4. Add the powder (1 level scoop per 30 ml of water) — always water first
+5. Close and gently shake
+6. Test temperature on the wrist (approximately 37°C)
+
+### Storage
+- Prepared bottle: consume within one hour (at room temperature)
+- Prepared bottle in the refrigerator (< 4°C): up to 24 hours
+- Water only: can be prepared in advance in sterilised bottles
+- Never reheat twice
+- Never use a microwave (uneven heating)
 
 ---
 
-## 5. Diversification alimentaire (SFP 2022)
+## 3. Frequency and volumes by age (SFP)
 
-### Principes directeurs français
-- Début : 4 mois révolus au plus tôt, 6 mois idéalement
-- Jamais avant 4 mois (risque allergique, immaturité digestive)
-- Introduction progressive : un aliment nouveau tous les 3–5 jours
+### Newborn (0–1 month)
+- 7 to 10 bottles per 24 hours
+- Volume: 60–90 ml per bottle
+- Spacing: 2–3 hours, on demand
+- Return to birth weight expected by day 10–14
 
-### Ordre d'introduction recommandé en France
-1. **Légumes** : carotte, courgette, haricot vert, brocoli (purées lissées)
-2. **Fruits** : pomme, poire, banane, pêche (compotes sans sucre)
-3. **Céréales** : riz, maïs (farines infantiles)
-4. **Viandes/poissons/œufs** : dès 6 mois (10 g → 20 g progressivement)
-5. **Légumineuses** : avec précaution après 8 mois
-6. **Gluten** : entre 4 et 12 mois (exposition précoce recommandée)
+### Infant 1–3 months
+- 6 to 8 bottles per 24 hours
+- Volume: 90–150 ml per bottle
+- Progressive regularisation of feeding schedule
+- Do not space feeds more than 4 hours apart at night before 3 months
 
-### Allergènes majeurs : introduction précoce recommandée
-Contrairement aux anciennes recommandations, la SFP recommande désormais une introduction précoce des allergènes (dès 4–6 mois) pour réduire le risque d'allergie :
-- Arachide (beurre de cacahuète dilué)
-- Œuf (cuit)
-- Poisson
+### Infant 3–6 months
+- 5 to 6 bottles per 24 hours
+- Volume: 150–210 ml per bottle
+- Daily volume: 750–900 ml
+- Possible longer night stretch (5–6 hours)
+
+### Infant 6–12 months (with complementary feeding)
+- 3 to 4 bottles per day
+- Minimum total milk volume: 500 ml
+- Bottles complementary to solid meals
+
+---
+
+## 4. Vitamin D and supplementation
+
+### SFP recommendations (2022 consensus)
+- **Vitamin D**: systematic supplementation from birth
+  - Exclusive breastfeeding: 1,000–1,200 IU/day
+  - Formula feeding (fortified formula): 600–800 IU/day
+  - Recommended form: daily oral vitamin D3 solution
+- **Vitamin K**: at birth (hospital protocol), extended for 3 months with exclusive breastfeeding
+- **Fluoride**: not recommended before 6 months, discussed based on local caries risk
+
+---
+
+## 5. Complementary feeding (SFP 2022)
+
+### French guiding principles
+- Start: no earlier than 4 full months, ideally at 6 months
+- Never before 4 months (allergy risk, digestive immaturity)
+- Gradual introduction: one new food every 3–5 days
+
+### Recommended order of introduction in France
+1. **Vegetables**: carrot, courgette, green bean, broccoli (smooth purées)
+2. **Fruits**: apple, pear, banana, peach (sugar-free compotes)
+3. **Cereals**: rice, maize (infant flour)
+4. **Meat/fish/eggs**: from 6 months (10 g → 20 g progressively)
+5. **Legumes**: with caution after 8 months
+6. **Gluten**: between 4 and 12 months (early exposure recommended)
+
+### Major allergens: early introduction recommended
+Contrary to former recommendations, the SFP now recommends early introduction of allergens (from 4–6 months) to reduce allergy risk:
+- Peanut (diluted peanut butter)
+- Egg (cooked)
+- Fish
 - Gluten
-- Exception : si réaction allergique → consultation spécialisée
+- Exception: if an allergic reaction occurs → specialist referral
 
 ---
 
-## 6. Allaitement maternel : position SFP
+## 6. Breastfeeding: SFP position
 
-### Durée recommandée
-- Exclusif : 6 mois (consensus OMS/SFP)
-- Prolongé : jusqu'à 1–2 ans en complément de la diversification
-- Arrêt progressif recommandé, jamais brutal
+### Recommended duration
+- Exclusive: 6 months (WHO/SFP consensus)
+- Extended: up to 1–2 years alongside complementary feeding
+- Gradual weaning recommended, never abrupt
 
-### Soutien à l'allaitement
-- Mise au sein dans l'heure suivant la naissance
-- Pas de compléments sans indication médicale les 48 premières heures
-- Consultation en cas de douleurs, crevasses, engorgement
-
----
-
-## 7. Signes d'alimentation insuffisante
-
-### Signaux d'alarme à surveiller
-- Perte de poids > 10% du poids de naissance (surveillance pédiatrique)
-- Moins de 6 couches mouillées par jour après J5
-- Nourrisson non consolable, pleurs constants
-- Moins de 5 selles par semaine avant 1 mois (allaitement)
-- Stagnation pondérale confirmée sur 2 pesées espacées de 15 jours
-
-### Évaluation de la prise alimentaire adéquate
-- 5–8 couches mouillées par 24h = hydratation correcte
-- Nourrisson éveillé, vigoureux entre les tétées
-- Courbe de poids suivant les percentiles de référence
+### Breastfeeding support
+- Latch within the first hour after birth
+- No supplementary feeds without medical indication in the first 48 hours
+- Seek advice for pain, nipple soreness, engorgement
 
 ---
 
-## 8. Pleurs et coliques du nourrisson
+## 7. Signs of inadequate feeding
 
-### Coliques (3 mois)
-- Définition : pleurs > 3h/jour, > 3 jours/semaine, > 3 semaines (règle des 3)
-- Pic à 6 semaines, résolution spontanée vers 3–4 mois
-- Aucun traitement médicamenteux n'a prouvé son efficacité
-- Approche : portage, massage abdominal, probiotiques (L. reuteri, evidence modérée)
-- Exclure un déficit en lactase, RGO, APLV avant de conclure à des "coliques simples"
+### Warning signals to watch for
+- Weight loss > 10% of birth weight (paediatric monitoring required)
+- Fewer than 6 wet nappies per day after day 5
+- Inconsolable infant, constant crying
+- Fewer than 5 stools per week before 1 month (breastfed)
+- Confirmed weight stagnation over 2 weigh-ins 15 days apart
 
-### Différencier pleurs de faim vs coliques
-- Pleurs de faim : apaisés par la mise au sein ou le biberon
-- Coliques : persistent malgré l'alimentation, se cambre, visage rouge
-- Importance de ne pas suralimenter pour "calmer" les pleurs
-
----
-
-## 9. Tableau récapitulatif des volumes journaliers
-
-| Âge          | Nb biberons/jour | Vol. par biberon | Total journalier |
-|--------------|-----------------|-----------------|-----------------|
-| 0–1 mois     | 7–10            | 60–90 ml        | 500–700 ml      |
-| 1–2 mois     | 6–8             | 90–120 ml       | 600–750 ml      |
-| 2–3 mois     | 6–7             | 120–150 ml      | 700–800 ml      |
-| 3–4 mois     | 5–6             | 150–180 ml      | 750–900 ml      |
-| 4–6 mois     | 4–5             | 180–210 ml      | 750–900 ml      |
-| 6–12 mois*   | 3–4             | 210–240 ml      | 500–700 ml      |
-
-*Avec diversification alimentaire
+### Assessing adequate intake
+- 5–8 wet nappies per 24 hours = adequate hydration
+- Alert and vigorous between feeds
+- Weight curve following reference percentiles
 
 ---
 
-*Source : Société Française de Pédiatrie (SFP) — Comité de nutrition, recommandations 2022*
-*Ce document est une synthèse pédagogique des recommandations françaises officielles.*
+## 8. Crying and infantile colic
+
+### Colic (3-month colic)
+- Definition: crying > 3 hours/day, > 3 days/week, > 3 weeks (rule of 3s)
+- Peaks at 6 weeks, resolves spontaneously around 3–4 months
+- No drug treatment has proven effective
+- Approach: babywearing, abdominal massage, probiotics (L. reuteri, moderate evidence)
+- Rule out lactase deficiency, GOR, CMPA before concluding "simple colic"
+
+### Distinguishing hunger crying from colic
+- Hunger crying: soothed by breastfeeding or bottle
+- Colic: persists despite feeding, arching, flushed face
+- Important not to overfeed in an attempt to "stop" the crying
+
+---
+
+## 9. Summary table of daily volumes
+
+| Age           | Bottles/day | Volume per bottle | Daily total  |
+|---------------|-------------|-------------------|--------------|
+| 0–1 month     | 7–10        | 60–90 ml          | 500–700 ml   |
+| 1–2 months    | 6–8         | 90–120 ml         | 600–750 ml   |
+| 2–3 months    | 6–7         | 120–150 ml        | 700–800 ml   |
+| 3–4 months    | 5–6         | 150–180 ml        | 750–900 ml   |
+| 4–6 months    | 4–5         | 180–210 ml        | 750–900 ml   |
+| 6–12 months*  | 3–4         | 210–240 ml        | 500–700 ml   |
+
+*With complementary feeding
+
+---
+
+*Source: French Paediatric Society (SFP) — Nutrition Committee, 2022 recommendations*
+*This document is a pedagogical summary of official French guidelines.*

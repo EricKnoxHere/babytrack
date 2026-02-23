@@ -11,78 +11,78 @@
 ## Phase 1 — Data Layer ✅
 
 ### Models
-- [x] Créer `app/models/baby.py` — modèle Baby (nom, date de naissance, poids initial)
-- [x] Créer `app/models/feeding.py` — modèle Feeding (timestamp, quantité ml, type biberon/allaitement)
-- [x] Créer `app/services/database.py` — init SQLite, create_tables()
-- [x] Écrire migrations initiales (CREATE TABLE IF NOT EXISTS dans database.py)
+- [x] Create `app/models/baby.py` — Baby model (name, date of birth, birth weight)
+- [x] Create `app/models/feeding.py` — Feeding model (timestamp, quantity ml, type bottle/breastfeeding)
+- [x] Create `app/services/database.py` — SQLite init, create_tables()
+- [x] Write initial migrations (CREATE TABLE IF NOT EXISTS in database.py)
 
 ### CRUD
 - [x] `app/services/baby_service.py` — create, get, update, delete baby
 - [x] `app/services/feeding_service.py` — add_feeding, get_feedings_by_day, get_feedings_by_range
-- [x] Tests unitaires pour les services (tests/) — 21/21 passed
+- [x] Unit tests for services (tests/) — 21/21 passed
 
 ---
 
 ## Phase 2 — RAG Pipeline ✅
 
 ### Knowledge Base
-- [x] Guides OMS alimentation nourrisson → `data/docs/oms_alimentation_nourrisson.md`
-- [x] Guide SFP (Société Française de Pédiatrie) → `data/docs/sfp_guide_alimentation_nourrisson.md`
-- [x] Stockés en markdown structuré dans `data/docs/`
+- [x] WHO infant feeding guidelines → `data/docs/oms_alimentation_nourrisson.md`
+- [x] SFP (French Paediatric Society) guide → `data/docs/sfp_guide_alimentation_nourrisson.md`
+- [x] Stored as structured markdown in `data/docs/`
 
 ### LlamaIndex
-- [x] Installer dépendances : llama-index-core, llama-index-llms-anthropic, llama-index-embeddings-huggingface, anthropic
-- [x] Créer `app/rag/indexer.py` — ingestion et indexation (VectorStoreIndex, persistance)
-- [x] Créer `app/rag/retriever.py` — recherche sémantique + format_context
-- [x] Créer `app/rag/analyzer.py` — analyse biberons via Claude + contexte RAG
-- [x] Tests : 18/18 passés (MockEmbedding, mock Anthropic, zéro réseau)
+- [x] Install dependencies: llama-index-core, llama-index-llms-anthropic, llama-index-embeddings-huggingface, anthropic
+- [x] Create `app/rag/indexer.py` — ingestion and indexing (VectorStoreIndex, persistence)
+- [x] Create `app/rag/retriever.py` — semantic search + format_context
+- [x] Create `app/rag/analyzer.py` — feeding analysis via Claude + RAG context
+- [x] Tests: 18/18 passed (MockEmbedding, mock Anthropic, zero network)
 
 ---
 
-## Phase 3 — API FastAPI ✅
+## Phase 3 — FastAPI ✅
 
 ### Endpoints
-- [x] `POST /babies` — créer un bébé
-- [x] `POST /feedings` — enregistrer un biberon
-- [x] `GET /feedings/{baby_id}` — historique biberons (filtres: day, start/end)
-- [x] `GET /analysis/{baby_id}` — analyse IA de la journée/semaine
-- [x] `GET /health` — healthcheck
+- [x] `POST /babies` — create a baby
+- [x] `POST /feedings` — log a feeding
+- [x] `GET /feedings/{baby_id}` — feeding history (filters: day, start/end)
+- [x] `GET /analysis/{baby_id}` — AI analysis for the day/week
+- [x] `GET /health` — health check
 
-### Intégration
-- [x] Brancher analyzer RAG sur l'endpoint `/analysis`
-- [x] Gestion des erreurs et validation (Pydantic)
-- [x] Tests d'intégration API (20/20 passent)
+### Integration
+- [x] Wire RAG analyzer to `/analysis` endpoint
+- [x] Error handling and validation (Pydantic)
+- [x] API integration tests (20/20 passing)
 
 ---
 
-## Phase 4 — UI Streamlit
+## Phase 4 — Streamlit UI ✅
 
 ### Dashboard
-- [x] Page d'accueil — saisie biberon rapide
-- [x] Graphique biberons/jour (quantité et fréquence)
-- [x] Section analyse IA — résumé quotidien
-- [!] Courbe de poids — nécessite une table weight_entries (post-MVP)
+- [x] Home page — quick feeding entry
+- [x] Feedings per day chart (volume and frequency)
+- [x] AI analysis section — daily summary
+- [!] Weight curve — requires a weight_entries table (post-MVP)
 
-### Polish portfolio
-- [x] README.md — architecture RAG documentée avec schéma
-- [x] Config déploiement Render (render.yaml + .env.example)
-- [ ] Screenshot/GIF pour le portfolio
+### Portfolio polish
+- [x] README.md — documented RAG architecture with diagram
+- [x] Render deployment config (render.yaml + .env.example)
+- [ ] Screenshot/GIF for the portfolio
 
 ---
 
 ## Backlog (post-MVP)
-- [ ] Suivi couches
-- [ ] Suivi sommeil
-- [ ] Multi-enfants
-- [ ] Authentification
+- [ ] Diaper tracking
+- [ ] Sleep tracking
+- [ ] Multiple children
+- [ ] Authentication
 
 ---
 
 ## Review
 
 ### Phase 1 — 2026-02-23
-- 19/19 tests unitaires passent (pytest-asyncio, DB en mémoire)
-- Models Pydantic v2 : Baby, BabyCreate, BabyUpdate, Feeding, FeedingCreate, FeedingUpdate
-- Services async aiosqlite : CRUD complet + get_by_day + get_by_range + cascade delete
-- Foreign keys SQLite activées, schéma strict (CHECK constraints)
-- Virtualenv `.venv` avec toutes les dépendances installées
+- 19/19 unit tests passing (pytest-asyncio, in-memory DB)
+- Pydantic v2 models: Baby, BabyCreate, BabyUpdate, Feeding, FeedingCreate, FeedingUpdate
+- Async aiosqlite services: full CRUD + get_by_day + get_by_range + cascade delete
+- SQLite foreign keys enabled, strict schema (CHECK constraints)
+- Virtualenv `.venv` with all dependencies installed

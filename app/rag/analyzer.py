@@ -1,4 +1,4 @@
-"""Analyse des données de biberons via Claude + contexte RAG OMS/SFP."""
+"""Feeding analysis via Claude + WHO/SFP RAG context."""
 
 import logging
 import os
@@ -20,31 +20,31 @@ MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1024"))
 
 
 def _summarize_feedings(feedings: list[Feeding]) -> str:
-    """Construit un résumé textuel structuré des biberons pour le prompt."""
+    """Builds a structured text summary of feedings for the prompt."""
     if not feedings:
-        return "Aucun biberon enregistré sur cette période."
+        return "No feedings recorded for this period."
 
     total_ml = sum(f.quantity_ml for f in feedings)
     count = len(feedings)
     types = {f.feeding_type for f in feedings}
     type_label = {
-        frozenset({"bottle"}): "biberon uniquement",
-        frozenset({"breastfeeding"}): "allaitement uniquement",
-        frozenset({"bottle", "breastfeeding"}): "mixte (biberon + allaitement)",
+        frozenset({"bottle"}): "bottle only",
+        frozenset({"breastfeeding"}): "breastfeeding only",
+        frozenset({"bottle", "breastfeeding"}): "mixed (bottle + breastfeeding)",
     }.get(frozenset(types), ", ".join(types))
 
-    # Détail chronologique
+    # Chronological detail
     lines = [
         f"- {f.fed_at.strftime('%H:%M')} : {f.quantity_ml} ml ({f.feeding_type})"
-        + (f" — note : {f.notes}" if f.notes else "")
+        + (f" — note: {f.notes}" if f.notes else "")
         for f in sorted(feedings, key=lambda x: x.fed_at)
     ]
 
     return (
-        f"Nombre de prises : {count}\n"
-        f"Volume total : {total_ml} ml\n"
-        f"Type d'alimentation : {type_label}\n"
-        f"Détail chronologique :\n" + "\n".join(lines)
+        f"Number of feedings: {count}\n"
+        f"Total volume: {total_ml} ml\n"
+        f"Feeding type: {type_label}\n"
+        f"Chronological detail:\n" + "\n".join(lines)
     )
 
 
@@ -60,76 +60,76 @@ def _build_prompt(
     age_months = age_days // 30
 
     if age_days < 14:
-        age_str = f"{age_days} jours"
+        age_str = f"{age_days} days"
     elif age_weeks < 8:
-        age_str = f"{age_weeks} semaines"
+        age_str = f"{age_weeks} weeks"
     else:
-        age_str = f"{age_months} mois"
+        age_str = f"{age_months} months"
 
-    return f"""Tu es un assistant pédiatrique expert en nutrition nourrisson.
-Analyse les données d'alimentation du bébé et fournis des recommandations bienveillantes, précises et actionnables.
-Appuie-toi sur le contexte médical OMS/SFP fourni ci-dessous.
+    return f"""You are a pediatric assistant specialising in infant nutrition.
+Analyse the baby's feeding data and provide kind, precise, and actionable recommendations.
+Base your response on the WHO/SFP medical context provided below.
 
-## Contexte médical de référence (OMS / SFP)
+## Medical reference context (WHO / SFP)
 {rag_context}
 
-## Profil du bébé
-- Nom : {baby.name}
-- Âge : {age_str}
-- Poids de naissance : {baby.birth_weight_grams} g
+## Baby profile
+- Name: {baby.name}
+- Age: {age_str}
+- Birth weight: {baby.birth_weight_grams} g
 
-## Données d'alimentation — {period_label}
+## Feeding data — {period_label}
 {feeding_summary}
 
-## Analyse demandée
-Réponds en français, de façon structurée, avec les sections suivantes :
+## Requested analysis
+Respond in English, in a structured format, with the following sections:
 
-### ✅ Points positifs
-Cite ce qui est bien (volumes, fréquence, régularité).
+### ✅ Positive points
+Note what is going well (volumes, frequency, regularity).
 
-### ⚠️ Points d'attention
-Signale les écarts par rapport aux recommandations OMS/SFP pour cet âge (volumes trop faibles/élevés, intervalles trop longs/courts, etc.).
+### ⚠️ Points of attention
+Flag deviations from WHO/SFP recommendations for this age (volumes too low/high, intervals too long/short, etc.).
 
-### 💡 Recommandations
-Donne 2–3 actions concrètes et adaptées à l'âge du bébé.
+### 💡 Recommendations
+Give 2–3 concrete actions tailored to the baby's age.
 
-### 📊 Synthèse
-Une phrase de synthèse sur l'alimentation de la période analysée.
+### 📊 Summary
+A one-sentence summary of the feeding for the analysed period.
 
-Sois rassurant si les données sont normales. Recommande de consulter un pédiatre uniquement si une anomalie significative est détectée.
+Be reassuring if the data is normal. Recommend consulting a paediatrician only if a significant anomaly is detected.
 """
 
 
 def analyze_feedings(
     baby: Baby,
     feedings: list[Feeding],
-    period_label: str = "la période",
+    period_label: str = "the period",
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
 ) -> str:
     """
-    Analyse les biberons d'un bébé via Claude + contexte RAG OMS/SFP.
+    Analyses a baby's feedings via Claude + WHO/SFP RAG context.
 
     Args:
-        baby: Profil complet du bébé.
-        feedings: Liste des biberons à analyser.
-        period_label: Label lisible de la période (ex: "journée du 23/02/2026").
-        index: Index vectoriel pré-chargé (optionnel, évite le rechargement).
-        index_dir: Chemin vers l'index (si index non fourni).
+        baby: Full baby profile.
+        feedings: List of feedings to analyse.
+        period_label: Human-readable period label (e.g. "day of 23/02/2026").
+        index: Pre-loaded vector index (optional, avoids reload).
+        index_dir: Path to the index (if index not provided).
 
     Returns:
-        Analyse textuelle structurée en markdown.
+        Structured markdown text analysis.
     """
-    # 1. Construire la query RAG selon l'âge et le type d'alimentation
+    # 1. Build the RAG query based on age and feeding type
     age_days = (date.today() - baby.birth_date).days
     feeding_types = {f.feeding_type for f in feedings}
     query = (
-        f"recommandations volume biberon fréquence alimentation nourrisson "
-        f"{age_days // 30} mois "
-        f"{'biberon lait artificiel' if 'bottle' in feeding_types else 'allaitement maternel'}"
+        f"recommended bottle volume feeding frequency infant "
+        f"{age_days // 30} months "
+        f"{'bottle formula' if 'bottle' in feeding_types else 'breastfeeding'}"
     )
 
-    # 2. Récupérer le contexte médical
+    # 2. Retrieve medical context
     kwargs = {"query": query, "top_k": 4}
     if index is not None:
         kwargs["index"] = index
@@ -140,13 +140,13 @@ def analyze_feedings(
         nodes = retrieve_context(**kwargs)
         rag_context = format_context(nodes)
     except Exception as exc:
-        logger.warning("RAG retrieval échoué (%s) — analyse sans contexte", exc)
-        rag_context = "Contexte médical non disponible (index absent ou erreur)."
+        logger.warning("RAG retrieval failed (%s) — analysing without context", exc)
+        rag_context = "Medical context unavailable (missing index or error)."
 
-    # 3. Construire et envoyer le prompt à Claude
+    # 3. Build and send the prompt to Claude
     prompt = _build_prompt(baby, feedings, period_label, rag_context)
 
-    client = anthropic.Anthropic()  # utilise ANTHROPIC_API_KEY de l'environnement
+    client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY from environment
     message = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
@@ -154,5 +154,5 @@ def analyze_feedings(
     )
 
     analysis = message.content[0].text
-    logger.info("Analyse générée pour %s (%d tokens)", baby.name, message.usage.output_tokens)
+    logger.info("Analysis generated for %s (%d tokens)", baby.name, message.usage.output_tokens)
     return analysis

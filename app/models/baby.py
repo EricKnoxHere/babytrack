@@ -7,23 +7,23 @@ from pydantic import BaseModel, Field
 class BabyBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     birth_date: date
-    birth_weight_grams: int = Field(..., gt=0, description="Poids de naissance en grammes")
+    birth_weight_grams: int = Field(..., gt=0, description="Birth weight in grams")
 
 
 class BabyCreate(BabyBase):
-    """Payload pour créer un bébé."""
+    """Payload to create a baby."""
     pass
 
 
 class BabyUpdate(BaseModel):
-    """Payload pour mettre à jour un bébé — tous les champs sont optionnels."""
+    """Payload to update a baby — all fields are optional."""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     birth_date: Optional[date] = None
     birth_weight_grams: Optional[int] = Field(None, gt=0)
 
 
 class Baby(BabyBase):
-    """Modèle complet retourné par la base de données."""
+    """Full model returned from the database."""
     id: int
     created_at: datetime
 

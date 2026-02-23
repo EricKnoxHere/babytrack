@@ -1,4 +1,4 @@
-"""Tests unitaires pour baby_service."""
+"""Unit tests for baby_service."""
 
 from datetime import date
 
@@ -52,11 +52,11 @@ async def test_update_baby(db):
     updated = await update_baby(db, baby.id, BabyUpdate(name="Léa-Rose"))
     assert updated is not None
     assert updated.name == "Léa-Rose"
-    assert updated.birth_weight_grams == 3200  # inchangé
+    assert updated.birth_weight_grams == 3200  # unchanged
 
 
 async def test_update_baby_no_fields(db):
-    """Update sans champ = retour identique."""
+    """Update with no fields = returns unchanged record."""
     baby = await create_baby(db, _BABY)
     updated = await update_baby(db, baby.id, BabyUpdate())
     assert updated is not None

@@ -1,4 +1,4 @@
-"""Endpoint d'analyse IA des biberons via Claude + RAG."""
+"""AI analysis endpoint for feedings via Claude + RAG."""
 
 import asyncio
 import logging
@@ -33,44 +33,44 @@ async def analyze_baby_feedings(
     baby_id: int,
     request: Request,
     db: DbDep,
-    period: PeriodType = Query("day", description="Période d'analyse : 'day' ou 'week'"),
+    period: PeriodType = Query("day", description="Analysis period: 'day' or 'week'"),
     reference_date: Optional[date] = Query(
         None,
-        description="Date de référence (défaut : aujourd'hui). Format YYYY-MM-DD",
+        description="Reference date (default: today). Format YYYY-MM-DD",
     ),
 ) -> AnalysisResponse:
     """
-    Analyse l'alimentation d'un bébé via Claude + contexte RAG OMS/SFP.
+    Analyze a baby's feeding data via Claude + WHO/SFP RAG context.
 
-    - `period=day` (défaut) : analyse la journée de `reference_date`
-    - `period=week` : analyse les 7 derniers jours à partir de `reference_date`
+    - `period=day` (default): analyzes the day of `reference_date`
+    - `period=week`: analyzes the 7 days leading up to `reference_date`
     """
-    # 1. Vérifier que le bébé existe
+    # 1. Verify the baby exists
     baby = await baby_service.get_baby(db, baby_id)
     if not baby:
-        raise HTTPException(status_code=404, detail=f"Bébé {baby_id} introuvable")
+        raise HTTPException(status_code=404, detail=f"Baby {baby_id} not found")
 
-    # 2. Résoudre les dates
+    # 2. Resolve dates
     ref = reference_date or date.today()
 
     if period == "day":
         feedings = await feeding_service.get_feedings_by_day(db, baby_id, ref)
-        period_label = f"journée du {ref.strftime('%d/%m/%Y')}"
+        period_label = f"day of {ref.strftime('%m/%d/%Y')}"
     else:  # week
         start = ref - timedelta(days=6)
         feedings = await feeding_service.get_feedings_by_range(db, baby_id, start, ref)
-        period_label = f"semaine du {start.strftime('%d/%m/%Y')} au {ref.strftime('%d/%m/%Y')}"
+        period_label = f"week from {start.strftime('%m/%d/%Y')} to {ref.strftime('%m/%d/%Y')}"
 
     if not feedings:
         raise HTTPException(
             status_code=404,
-            detail=f"Aucun biberon enregistré pour la {period_label}",
+            detail=f"No feedings recorded for the {period_label}",
         )
 
-    # 3. Récupérer l'index RAG depuis l'état de l'app (peut être None)
+    # 3. Get the RAG index from app state (may be None)
     rag_index = getattr(request.app.state, "rag_index", None)
 
-    # 4. Appeler le analyzer dans un thread (il est synchrone / bloquant)
+    # 4. Call the analyzer in a thread (it is synchronous / blocking)
     loop = asyncio.get_event_loop()
     analysis_text = await loop.run_in_executor(
         None,

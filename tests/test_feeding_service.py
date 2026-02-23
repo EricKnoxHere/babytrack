@@ -1,4 +1,4 @@
-"""Tests unitaires pour feeding_service."""
+"""Unit tests for feeding_service."""
 
 from datetime import date, datetime, timezone
 
@@ -72,7 +72,7 @@ async def test_get_feedings_by_day(db):
     day = date(2024, 2, 5)
     await add_feeding(db, _feeding(baby.id, day, 6))
     await add_feeding(db, _feeding(baby.id, day, 10))
-    await add_feeding(db, _feeding(baby.id, date(2024, 2, 6), 8))  # autre jour
+    await add_feeding(db, _feeding(baby.id, date(2024, 2, 6), 8))  # different day
 
     feedings = await get_feedings_by_day(db, baby.id, day)
     assert len(feedings) == 2
@@ -89,14 +89,14 @@ async def test_get_feedings_by_range(db):
     await add_feeding(db, _feeding(baby.id, date(2024, 2, 1), 8))
     await add_feeding(db, _feeding(baby.id, date(2024, 2, 3), 8))
     await add_feeding(db, _feeding(baby.id, date(2024, 2, 5), 8))
-    await add_feeding(db, _feeding(baby.id, date(2024, 2, 10), 8))  # hors range
+    await add_feeding(db, _feeding(baby.id, date(2024, 2, 10), 8))  # outside range
 
     feedings = await get_feedings_by_range(db, baby.id, date(2024, 2, 1), date(2024, 2, 5))
     assert len(feedings) == 3
 
 
 async def test_get_feedings_by_range_inclusive(db):
-    """Les bornes start et end sont incluses."""
+    """start and end bounds are inclusive."""
     baby = await _make_baby(db)
     await add_feeding(db, _feeding(baby.id, date(2024, 2, 1), 8))
     await add_feeding(db, _feeding(baby.id, date(2024, 2, 7), 8))
@@ -117,7 +117,7 @@ async def test_delete_feeding_not_found(db):
 
 
 async def test_cascade_delete_baby(db):
-    """Supprimer un bébé supprime ses biberons en cascade."""
+    """Deleting a baby cascades to delete its feedings."""
     from app.services.baby_service import delete_baby
 
     baby = await _make_baby(db)

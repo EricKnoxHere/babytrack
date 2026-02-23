@@ -1,141 +1,141 @@
-# Recommandations OMS — Alimentation du nourrisson et du jeune enfant
+# WHO Recommendations — Infant and Young Child Feeding
 
-Source : Organisation Mondiale de la Santé (OMS / WHO)
-Références : WHO 2023 — Infant and young child feeding guidelines
-
----
-
-## 1. Allaitement maternel exclusif (0–6 mois)
-
-L'OMS recommande l'allaitement maternel exclusif pendant les 6 premiers mois de vie.
-Aucun autre aliment ou liquide, même l'eau, n'est recommandé pendant cette période.
-
-### Bénéfices de l'allaitement exclusif
-- Protection contre les infections gastro-intestinales, respiratoires et ORL
-- Réduction du risque de mort subite du nourrisson (MSN)
-- Développement cognitif et sensoriel optimal
-- Composition adaptée aux besoins du nourrisson à chaque stade
-- Protection contre les maladies chroniques (obésité, diabète de type 2)
-
-### Fréquence recommandée (allaitement)
-- À la demande, sans restriction horaire
-- Minimum 8 à 12 tétées par 24 heures les premières semaines
-- Durée par tétée : variable selon le nourrisson (10 à 45 minutes)
-- Signes de faim : éveil, succion des mains, mouvement des lèvres
-- Ne pas attendre les pleurs (signe de faim tardif)
+Source: World Health Organization (WHO)
+References: WHO 2023 — Infant and young child feeding guidelines
 
 ---
 
-## 2. Alimentation mixte et alimentation artificielle (biberon)
+## 1. Exclusive breastfeeding (0–6 months)
 
-Lorsque l'allaitement n'est pas possible ou est complété par du lait artificiel :
+The WHO recommends exclusive breastfeeding for the first 6 months of life.
+No other food or liquid, including water, is recommended during this period.
 
-### Volumes recommandés par biberon selon l'âge
-- **0–1 mois** : 60–90 ml par biberon, toutes les 2–3 heures (8–12 biberons/jour)
-- **1–2 mois** : 90–120 ml par biberon, toutes les 3 heures (7–8 biberons/jour)
-- **2–3 mois** : 120–150 ml par biberon, toutes les 3–4 heures (6–7 biberons/jour)
-- **3–4 mois** : 150–180 ml par biberon, toutes les 4 heures (5–6 biberons/jour)
-- **4–6 mois** : 180–210 ml par biberon, toutes les 4–5 heures (4–5 biberons/jour)
+### Benefits of exclusive breastfeeding
+- Protection against gastrointestinal, respiratory, and ear infections
+- Reduced risk of sudden infant death syndrome (SIDS)
+- Optimal cognitive and sensory development
+- Composition adapted to the infant's needs at each stage
+- Protection against chronic diseases (obesity, type 2 diabetes)
 
-### Volume journalier total recommandé
-- Règle générale : 150 ml/kg/jour (± 30 ml selon appétit)
-- Ne pas dépasser 1 000 ml par jour avant la diversification
-- Exemple : bébé de 4 kg → environ 600 ml/jour répartis en biberons
-
-### Signaux de satiété à respecter
-- Ne jamais forcer un nourrisson à finir un biberon
-- Respecter les signaux de satiété : détourne la tête, relâche la tétine, s'endort
-- L'auto-régulation est une compétence innée à préserver
+### Recommended frequency (breastfeeding)
+- On demand, without time restrictions
+- Minimum 8 to 12 feeds per 24 hours during the first weeks
+- Duration per feed: varies by infant (10 to 45 minutes)
+- Hunger cues: waking, sucking hands, lip movements
+- Do not wait for crying (late hunger cue)
 
 ---
 
-## 3. Diversification alimentaire (à partir de 6 mois)
+## 2. Mixed feeding and formula feeding (bottle)
 
-L'introduction d'aliments complémentaires doit commencer à 6 mois révolus, tout en maintenant l'allaitement jusqu'à 2 ans ou plus.
+When breastfeeding is not possible or is supplemented with formula:
 
-### Signes de maturité pour la diversification
-- Tient la tête droite et stable
-- S'assoit avec un léger soutien
-- Perd le réflexe d'extrusion (ne recrache plus systématiquement)
-- Montre de l'intérêt pour la nourriture
+### Recommended bottle volumes by age
+- **0–1 month**: 60–90 ml per bottle, every 2–3 hours (8–12 bottles/day)
+- **1–2 months**: 90–120 ml per bottle, every 3 hours (7–8 bottles/day)
+- **2–3 months**: 120–150 ml per bottle, every 3–4 hours (6–7 bottles/day)
+- **3–4 months**: 150–180 ml per bottle, every 4 hours (5–6 bottles/day)
+- **4–6 months**: 180–210 ml per bottle, every 4–5 hours (4–5 bottles/day)
 
-### Aliments à introduire progressivement
-- Légumes cuits réduits en purée (carotte, courgette, patate douce)
-- Fruits frais mixés (pomme, poire, banane)
-- Céréales sans gluten en premier (riz, maïs)
-- Viande/poisson dès 6 mois (10–20 g/jour au début)
+### Recommended total daily volume
+- General rule: 150 ml/kg/day (± 30 ml depending on appetite)
+- Do not exceed 1,000 ml per day before complementary feeding begins
+- Example: 4 kg baby → approximately 600 ml/day spread across bottles
 
-### Aliments à éviter avant 1 an
-- Miel (risque de botulisme)
-- Sel et sucre ajoutés
-- Lait de vache comme boisson principale
-- Noix entières, petites pièces dures (risque d'étouffement)
-- Charcuteries, plats préparés
+### Satiety signals to respect
+- Never force an infant to finish a bottle
+- Respect satiety signals: turns head away, releases teat, falls asleep
+- Self-regulation is an innate skill to preserve
 
 ---
 
-## 4. Courbes de croissance et surveillance du poids
+## 3. Complementary feeding (from 6 months)
 
-### Standards OMS de croissance (OMS 2006)
-L'OMS publie des courbes de référence internationales utilisées dans le monde entier.
+The introduction of complementary foods should begin at 6 full months, while maintaining breastfeeding until age 2 or beyond.
 
-### Rythme de prise de poids normale
-- **0–3 mois** : 200–300 g/semaine (environ 1 kg/mois)
-- **3–6 mois** : 100–200 g/semaine
-- **6–12 mois** : 50–100 g/semaine
-- Double du poids de naissance vers 4–5 mois
-- Triple du poids de naissance vers 12 mois
+### Readiness signs for complementary feeding
+- Holds head upright and steady
+- Sits with slight support
+- Loss of the extrusion reflex (no longer systematically spits out food)
+- Shows interest in food
 
-### Alertes à surveiller
-- Perte de poids > 10% du poids de naissance (physiologique jusqu'à J5, doit remonter à J10–J14)
-- Stagnation pondérale > 2 semaines
-- Prise de poids insuffisante : < 150 g/semaine avant 3 mois
+### Foods to introduce gradually
+- Cooked puréed vegetables (carrot, courgette, sweet potato)
+- Puréed fresh fruits (apple, pear, banana)
+- Gluten-free cereals first (rice, maize)
+- Meat/fish from 6 months (10–20 g/day initially)
 
----
-
-## 5. Hydratation
-
-### Besoins en eau
-- **< 6 mois allaitement exclusif** : aucun apport en eau nécessaire (le lait maternel contient 87% d'eau)
-- **< 6 mois biberon** : ne pas diluer les biberons; eau bouillie pour la préparation
-- **> 6 mois** : proposer de l'eau en complément des repas (50–100 ml/repas)
-
-### Température du biberon
-- Idéalement tiède (37°C)
-- Éviter les biberons trop chauds (risque de brûlures)
-- Test du poignet pour vérifier la température
+### Foods to avoid before 1 year
+- Honey (risk of botulism)
+- Added salt and sugar
+- Cow's milk as the main drink
+- Whole nuts, small hard pieces (choking hazard)
+- Processed meats, ready meals
 
 ---
 
-## 6. Positions et technique de biberon
+## 4. Growth charts and weight monitoring
 
-### Bonnes pratiques
-- Tenir le nourrisson semi-incliné (45°), jamais à plat
-- Incliner le biberon pour éviter l'ingestion d'air
-- Faire des pauses pour roter (toutes les 30–60 ml)
-- Jeter tout biberon non consommé dans l'heure
-- Ne jamais laisser un biberon dans le lit
+### WHO growth standards (WHO 2006)
+The WHO publishes international reference growth charts used worldwide.
 
-### Tétines et biberons
-- Flux adapté à l'âge (flux lent 0–3 mois, moyen 3–6 mois)
-- Biberons en verre ou plastique sans BPA
-- Stérilisation pendant les 6 premiers mois
+### Normal weight gain rates
+- **0–3 months**: 200–300 g/week (approximately 1 kg/month)
+- **3–6 months**: 100–200 g/week
+- **6–12 months**: 50–100 g/week
+- Doubles birth weight around 4–5 months
+- Triples birth weight around 12 months
 
----
-
-## 7. Régurgitations et reflux
-
-### Régurgitations physiologiques (normales)
-- Fréquentes avant 4–6 mois (cardia immature)
-- Sans douleur, sans perte de poids = normales
-- Diminuent à la diversification et à la position assise
-
-### Signes d'alarme (RGO pathologique)
-- Pleurs excessifs, arching (se cambre)
-- Refus de s'alimenter, perte de poids
-- Apnées, pneumonies à répétition → consulter un pédiatre
+### Alerts to watch for
+- Weight loss > 10% of birth weight (physiological up to day 5, should recover by day 10–14)
+- Weight stagnation > 2 weeks
+- Insufficient weight gain: < 150 g/week before 3 months
 
 ---
 
-*Source : OMS — Infant and young child feeding, Recommandations clés 2023*
-*Ce document est une synthèse à usage pédagogique.*
+## 5. Hydration
+
+### Water requirements
+- **< 6 months exclusive breastfeeding**: no additional water needed (breast milk is 87% water)
+- **< 6 months bottle-fed**: do not dilute formula; use boiled water for preparation
+- **> 6 months**: offer water alongside meals (50–100 ml/meal)
+
+### Bottle temperature
+- Ideally warm (37°C)
+- Avoid bottles that are too hot (risk of burns)
+- Test on the wrist to check temperature
+
+---
+
+## 6. Positioning and bottle technique
+
+### Best practices
+- Hold the infant semi-reclined (45°), never flat
+- Tilt the bottle to prevent air ingestion
+- Take breaks to burp (every 30–60 ml)
+- Discard any bottle not consumed within one hour
+- Never leave a bottle in the cot
+
+### Teats and bottles
+- Flow rate appropriate for age (slow flow 0–3 months, medium 3–6 months)
+- Glass or BPA-free plastic bottles
+- Sterilise for the first 6 months
+
+---
+
+## 7. Regurgitation and reflux
+
+### Physiological regurgitation (normal)
+- Common before 4–6 months (immature cardiac sphincter)
+- No pain, no weight loss = normal
+- Decreases with complementary feeding and when sitting upright
+
+### Warning signs (pathological GOR)
+- Excessive crying, arching
+- Feeding refusal, weight loss
+- Apnoeas, recurrent pneumonia → consult a paediatrician
+
+---
+
+*Source: WHO — Infant and young child feeding, Key Recommendations 2023*
+*This document is a summary for educational purposes.*

@@ -1,4 +1,4 @@
-"""CRUD async pour les bébés."""
+"""Async CRUD operations for babies."""
 
 from datetime import datetime
 
@@ -18,7 +18,7 @@ def _row_to_baby(row: aiosqlite.Row) -> Baby:
 
 
 async def create_baby(db: aiosqlite.Connection, baby: BabyCreate) -> Baby:
-    """Insère un nouveau bébé et retourne l'enregistrement complet."""
+    """Insert a new baby and return the full record."""
     cursor = await db.execute(
         "INSERT INTO babies (name, birth_date, birth_weight_grams) VALUES (?, ?, ?)",
         (baby.name, baby.birth_date.isoformat(), baby.birth_weight_grams),
@@ -31,25 +31,25 @@ async def create_baby(db: aiosqlite.Connection, baby: BabyCreate) -> Baby:
 
 
 async def get_baby(db: aiosqlite.Connection, baby_id: int) -> Baby | None:
-    """Retourne un bébé par son id, ou None s'il n'existe pas."""
+    """Return a baby by id, or None if not found."""
     async with db.execute("SELECT * FROM babies WHERE id = ?", (baby_id,)) as cur:
         row = await cur.fetchone()
     return _row_to_baby(row) if row else None
 
 
 async def get_all_babies(db: aiosqlite.Connection) -> list[Baby]:
-    """Retourne tous les bébés enregistrés."""
+    """Return all registered babies."""
     rows = await db.execute_fetchall("SELECT * FROM babies ORDER BY created_at")
     return [_row_to_baby(r) for r in rows]
 
 
 async def update_baby(db: aiosqlite.Connection, baby_id: int, data: BabyUpdate) -> Baby | None:
-    """Met à jour les champs fournis et retourne le bébé mis à jour, ou None."""
+    """Update provided fields and return the updated baby, or None."""
     updates = {k: v for k, v in data.model_dump().items() if v is not None}
     if not updates:
         return await get_baby(db, baby_id)
 
-    # Sérialise les dates
+    # Serialize dates
     if "birth_date" in updates:
         updates["birth_date"] = updates["birth_date"].isoformat()
 
@@ -61,7 +61,7 @@ async def update_baby(db: aiosqlite.Connection, baby_id: int, data: BabyUpdate) 
 
 
 async def delete_baby(db: aiosqlite.Connection, baby_id: int) -> bool:
-    """Supprime un bébé (et ses biberons en cascade). Retourne True si supprimé."""
+    """Delete a baby (and its feedings via cascade). Returns True if deleted."""
     cursor = await db.execute("DELETE FROM babies WHERE id = ?", (baby_id,))
     await db.commit()
     return cursor.rowcount > 0

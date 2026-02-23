@@ -13,6 +13,6 @@ class HealthResponse(BaseModel):
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(request: Request) -> HealthResponse:
-    """Retourne l'état du service et la disponibilité du RAG."""
+    """Return service status and RAG availability."""
     rag_available = getattr(request.app.state, "rag_index", None) is not None
     return HealthResponse(status="ok", rag_available=rag_available)

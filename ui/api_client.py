@@ -1,4 +1,4 @@
-"""Client HTTP léger pour l'API BabyTrack."""
+"""Lightweight HTTP client for the BabyTrack API."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, Optional
 import requests
 
 API_BASE = os.getenv("BABYTRACK_API_URL", "http://localhost:8000")
-TIMEOUT = 10  # secondes
+TIMEOUT = 10  # seconds
 
 
 def _get(path: str, params: dict | None = None) -> Any:
@@ -24,7 +24,7 @@ def _post(path: str, payload: dict) -> Any:
     return resp.json()
 
 
-# ── Bébés ──────────────────────────────────────────────────────────────────
+# ── Babies ─────────────────────────────────────────────────────────────────
 
 
 def list_babies() -> list[dict]:
@@ -39,7 +39,7 @@ def create_baby(name: str, birth_date: date, birth_weight_grams: int) -> dict:
     })
 
 
-# ── Biberons ───────────────────────────────────────────────────────────────
+# ── Feedings ───────────────────────────────────────────────────────────────
 
 
 def add_feeding(
@@ -76,7 +76,7 @@ def get_feedings(
     return _get(f"/feedings/{baby_id}", params=params)
 
 
-# ── Analyse IA ─────────────────────────────────────────────────────────────
+# ── AI Analysis ────────────────────────────────────────────────────────────
 
 
 def get_analysis(
@@ -90,7 +90,7 @@ def get_analysis(
     return _get(f"/analysis/{baby_id}", params=params)
 
 
-# ── Healthcheck ────────────────────────────────────────────────────────────
+# ── Health check ───────────────────────────────────────────────────────────
 
 
 def health() -> dict:

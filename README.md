@@ -1,17 +1,17 @@
 # 🍼 BabyTrack
 
 > **Portfolio project** — Solutions Architect @ Anthropic  
-> Démonstration de RAG en production : FastAPI + SQLite + LlamaIndex + Claude
+> Production RAG demonstration: FastAPI + SQLite + LlamaIndex + Claude
 
 ---
 
-## ✨ Ce que ça fait
+## ✨ What it does
 
-BabyTrack est une application de suivi d'alimentation nourrisson avec **analyse IA personnalisée**.
+BabyTrack is an infant feeding tracker with **personalized AI analysis**.
 
-- 📝 **Enregistrer** chaque biberon (type, volume, heure)
-- 📊 **Visualiser** la consommation du jour et les tendances sur 7–14 jours
-- 🤖 **Analyser** les données via Claude, enrichi par des recommandations OMS/SFP (RAG)
+- 📝 **Record** every feeding (type, volume, time)
+- 📊 **Visualize** daily intake and 7–14-day trends
+- 🤖 **Analyze** data via Claude, enriched by WHO/SFP recommendations (RAG)
 
 ---
 
@@ -20,7 +20,7 @@ BabyTrack est une application de suivi d'alimentation nourrisson avec **analyse 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                       STREAMLIT UI                          │
-│  Dashboard · Saisie biberon · Analyse IA                    │
+│  Dashboard · Feeding entry · AI Analysis                    │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTP (requests)
                          ▼
@@ -37,8 +37,8 @@ BabyTrack est une application de suivi d'alimentation nourrisson avec **analyse 
 │  SQLite (aiosqlite│     │         RAG PIPELINE               │
 │  ─────────────── │     │                                   │
 │  babies           │     │  data/docs/                       │
-│  feedings         │     │  ├── oms_alimentation.md          │
-└───────────────────┘     │  └── sfp_guide.md                 │
+│  feedings         │     │  ├── who_infant_feeding.md        │
+└───────────────────┘     │  └── sfp_infant_feeding_guide.md  │
                           │           │                        │
                           │           ▼                        │
                           │  LlamaIndex VectorStoreIndex       │
@@ -52,38 +52,38 @@ BabyTrack est une application de suivi d'alimentation nourrisson avec **analyse 
                           └───────────────────────────────────┘
 ```
 
-### Flux d'analyse IA
+### AI Analysis Flow
 
-1. L'endpoint `GET /analysis/{baby_id}` reçoit `period=day|week`
-2. Les biberons sont récupérés depuis SQLite
-3. Une **query RAG** est construite (âge du bébé + type d'alimentation)
-4. LlamaIndex récupère les **top-4 chunks** pertinents OMS/SFP
-5. Un prompt structuré est envoyé à **Claude** avec le contexte médical
-6. La réponse markdown est retournée et affichée dans l'UI
+1. The `GET /analysis/{baby_id}` endpoint receives `period=day|week`
+2. Feedings are fetched from SQLite
+3. A **RAG query** is built (baby age + feeding type)
+4. LlamaIndex retrieves the **top-4 relevant chunks** from WHO/SFP guides
+5. A structured prompt is sent to **Claude** with the medical context
+6. The markdown response is returned and displayed in the UI
 
 ---
 
-## 🚀 Lancer le projet
+## 🚀 Running the project
 
 ```bash
-# 1. Installer les dépendances
+# 1. Install dependencies
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Configurer la clé API Anthropic
+# 2. Configure the Anthropic API key
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# 3. Construire l'index RAG (une seule fois)
+# 3. Build the RAG index (one-time)
 python -c "from app.rag.indexer import build_index; build_index()"
 
-# 4. Démarrer l'API
+# 4. Start the API
 uvicorn main:app --reload
 
-# 5. Démarrer l'UI (nouveau terminal)
+# 5. Start the UI (new terminal)
 streamlit run ui/app.py
 ```
 
-Ouvrir : http://localhost:8501
+Open: http://localhost:8501
 
 ---
 
@@ -91,14 +91,14 @@ Ouvrir : http://localhost:8501
 
 ```bash
 pytest tests/ -v
-# 59 tests · 0 échec · zéro appel réseau
+# 59 tests · 0 failures · zero network calls
 ```
 
-| Phase | Tests | Couverture |
-|-------|-------|------------|
-| Data Layer (SQLite CRUD) | 21 | Models, services async |
+| Phase | Tests | Coverage |
+|-------|-------|----------|
+| Data Layer (SQLite CRUD) | 21 | Models, async services |
 | RAG Pipeline (LlamaIndex + Claude) | 18 | Indexer, retriever, analyzer (mocks) |
-| API FastAPI | 20 | Tous les endpoints, cas d'erreur |
+| FastAPI API | 20 | All endpoints, error cases |
 
 ---
 
@@ -106,52 +106,52 @@ pytest tests/ -v
 
 ```
 babytrack/
-├── main.py                  # Entry point FastAPI + lifespan
+├── main.py                  # FastAPI entry point + lifespan
 ├── app/
 │   ├── models/              # Pydantic v2 — Baby, Feeding
-│   ├── services/            # CRUD async (aiosqlite)
+│   ├── services/            # Async CRUD (aiosqlite)
 │   ├── rag/                 # LlamaIndex — indexer, retriever, analyzer
 │   └── api/
-│       ├── dependencies.py  # Injection DB + RAG
+│       ├── dependencies.py  # DB + RAG injection
 │       └── routes/          # health, babies, feedings, analysis
 ├── ui/
 │   ├── app.py               # Streamlit dashboard
-│   └── api_client.py        # Wrapper HTTP
+│   └── api_client.py        # HTTP wrapper
 ├── data/
-│   ├── docs/                # Guides médicaux OMS/SFP (markdown)
-│   └── index/               # Index vectoriel persisté (gitignored)
+│   ├── docs/                # WHO/SFP medical guides (markdown)
+│   └── index/               # Persisted vector index (gitignored)
 └── tests/                   # pytest · asyncio_mode=auto
 ```
 
 ---
 
-## 🔑 Choix techniques
+## 🔑 Technical decisions
 
-| Choix | Pourquoi |
-|-------|---------|
-| **FastAPI** | Async natif, OpenAPI auto-générée, validation Pydantic |
-| **SQLite + aiosqlite** | Zero-config, démo portable, foreign keys strict |
-| **LlamaIndex** | Abstraction RAG mature, persistance d'index, top-k configurable |
-| **BAAI/bge-small-en-v1.5** | Embeddings légers (130 MB), multilingues, hors-ligne |
-| **Claude 3 Haiku** | Rapide, économique, excellent en analyse structurée |
-| **Streamlit** | Démo interactive rapide, idéal portfolio |
+| Decision | Why |
+|----------|-----|
+| **FastAPI** | Native async, auto-generated OpenAPI, Pydantic validation |
+| **SQLite + aiosqlite** | Zero-config, portable demo, strict foreign keys |
+| **LlamaIndex** | Mature RAG abstraction, index persistence, configurable top-k |
+| **BAAI/bge-small-en-v1.5** | Lightweight embeddings (130 MB), multilingual, offline |
+| **Claude 3 Haiku** | Fast, cost-effective, excellent for structured analysis |
+| **Streamlit** | Rapid interactive demo, ideal for portfolios |
 
 ---
 
-## ☁️ Déploiement Render
+## ☁️ Render Deployment
 
-Le repo inclut un `render.yaml` prêt à l'emploi (2 services : API + UI).
+The repo includes a ready-to-use `render.yaml` (2 services: API + UI).
 
 ```bash
-# 1. Fork le repo sur GitHub
-# 2. Connecter Render à ton compte GitHub
-# 3. "New Blueprint" → pointer sur le repo → Render détecte render.yaml
-# 4. Ajouter la variable d'environnement ANTHROPIC_API_KEY dans le dashboard
-# 5. Deploy !
+# 1. Fork the repo on GitHub
+# 2. Connect Render to your GitHub account
+# 3. "New Blueprint" → point to the repo → Render detects render.yaml
+# 4. Add the ANTHROPIC_API_KEY environment variable in the dashboard
+# 5. Deploy!
 ```
 
-> ⚠️ Sur le free tier Render, SQLite est éphémère (`/tmp`).
-> Les données sont perdues au redémarrage — suffisant pour une démo portfolio.
+> ⚠️ On Render's free tier, SQLite is ephemeral (`/tmp`).
+> Data is lost on restart — sufficient for a portfolio demo.
 
 ---
 
@@ -159,11 +159,11 @@ Le repo inclut un `render.yaml` prêt à l'emploi (2 services : API + UI).
 
 - [x] Phase 1 — Data Layer (SQLite CRUD)
 - [x] Phase 2 — RAG Pipeline
-- [x] Phase 3 — API FastAPI
-- [x] Phase 4 — UI Streamlit
-- [x] Config déploiement Render (`render.yaml` + `.env.example`)
-- [ ] Persistence DB (PostgreSQL) · Multi-enfants · Auth
+- [x] Phase 3 — FastAPI API
+- [x] Phase 4 — Streamlit UI
+- [x] Render deployment config (`render.yaml` + `.env.example`)
+- [ ] DB persistence (PostgreSQL) · Multi-child · Auth
 
 ---
 
-*Projet développé dans le cadre d'un dossier SA Applied AI — Anthropic Paris.*
+*Project developed as part of an SA Applied AI portfolio — Anthropic Paris.*

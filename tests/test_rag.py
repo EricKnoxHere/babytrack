@@ -1,10 +1,10 @@
-"""Tests du pipeline RAG — indexation, retrieval, analyse.
+"""Tests for the RAG pipeline — indexing, retrieval, analysis.
 
-Stratégie :
-- MockEmbedding (LlamaIndex) pour tous les tests d'index/retrieval → zéro réseau
-- Mock anthropic.Anthropic pour les tests analyzer → zéro API call
-- Les tests d'intégration réels (modèle HF réel + Claude) sont tagués `integration`
-  et nécessitent : pytest -m integration --run-integration
+Strategy:
+- MockEmbedding (LlamaIndex) for all index/retrieval tests → zero network
+- Mock anthropic.Anthropic for analyzer tests → zero API calls
+- Real integration tests (real HF model + Claude) are tagged `integration`
+  and require: pytest -m integration --run-integration
 """
 
 import shutil
@@ -23,7 +23,7 @@ from app.rag.retriever import format_context, retrieve_context
 from app.rag.analyzer import analyze_feedings, _summarize_feedings
 
 DOCS_DIR = Path("data/docs")
-MOCK_EMBED_DIM = 384  # dimension simulée
+MOCK_EMBED_DIM = 384  # simulated dimension
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -42,9 +42,9 @@ def tmp_index_dir():
 
 @pytest.fixture(scope="module")
 def index(tmp_index_dir, mock_embed_model):
-    """Index vectoriel construit avec MockEmbedding (pas de réseau)."""
+    """Vector index built with MockEmbedding (no network)."""
     if not DOCS_DIR.exists() or not any(DOCS_DIR.iterdir()):
-        pytest.skip("data/docs vide — skip tests RAG")
+        pytest.skip("data/docs empty — skipping RAG tests")
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         return build_index(docs_dir=DOCS_DIR, index_dir=tmp_index_dir)
 
@@ -76,41 +76,41 @@ def sample_feedings(sample_baby) -> list[Feeding]:
     ]
 
 
-# ─── Tests indexation ─────────────────────────────────────────────────────────
+# ─── Indexing tests ───────────────────────────────────────────────────────────
 
 def test_build_index_creates_docstore(index, tmp_index_dir):
-    """L'index construit doit persister un docstore.json."""
+    """The built index must persist a docstore.json."""
     assert (tmp_index_dir / "docstore.json").exists()
 
 
 def test_load_index_from_cache(tmp_index_dir, mock_embed_model):
-    """load_index doit charger depuis le cache sans reconstruire."""
+    """load_index should load from cache without rebuilding."""
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         loaded = load_index(index_dir=tmp_index_dir)
     assert loaded is not None
 
 
 def test_load_index_missing_raises(tmp_path):
-    """load_index lève FileNotFoundError si l'index est absent."""
-    with pytest.raises(FileNotFoundError, match="Index introuvable"):
-        load_index(index_dir=tmp_path / "inexistant")
+    """load_index raises FileNotFoundError if index is missing."""
+    with pytest.raises(FileNotFoundError, match="Index not found"):
+        load_index(index_dir=tmp_path / "nonexistent")
 
 
 def test_build_index_force_rebuild(tmp_index_dir, mock_embed_model):
-    """force_rebuild=True doit reconstruire même si l'index existe."""
+    """force_rebuild=True must rebuild even if the index already exists."""
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         idx = build_index(docs_dir=DOCS_DIR, index_dir=tmp_index_dir, force_rebuild=True)
     assert idx is not None
 
 
-# ─── Tests retrieval ──────────────────────────────────────────────────────────
+# ─── Retrieval tests ──────────────────────────────────────────────────────────
 
 def test_retrieve_context_returns_nodes(index, mock_embed_model):
-    """Une query doit retourner au plus top_k passages."""
+    """A query should return at most top_k passages."""
     with patch("app.rag.retriever.load_index", return_value=index), \
          patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         nodes = retrieve_context(
-            query="volume recommandé biberon nourrisson 2 mois",
+            query="recommended bottle volume infant 2 months",
             top_k=3,
             index=index,
         )
@@ -118,10 +118,10 @@ def test_retrieve_context_returns_nodes(index, mock_embed_model):
 
 
 def test_retrieve_context_documents_contain_text(index, mock_embed_model):
-    """Les nodes récupérés doivent contenir du texte non vide."""
+    """Retrieved nodes must contain non-empty text."""
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         nodes = retrieve_context(
-            query="allaitement maternel recommandations",
+            query="breastfeeding recommendations",
             top_k=4,
             index=index,
         )
@@ -129,36 +129,36 @@ def test_retrieve_context_documents_contain_text(index, mock_embed_model):
 
 
 def test_retrieve_context_docs_are_oms_or_sfp(index, mock_embed_model):
-    """Les sources doivent provenir des guides OMS ou SFP."""
+    """Sources should come from WHO or SFP guides."""
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
         nodes = retrieve_context(
-            query="biberon volume fréquence nourrisson",
+            query="bottle volume frequency infant",
             top_k=4,
             index=index,
         )
     sources = [n.metadata.get("file_name", "") for n in nodes]
     assert any("oms" in s.lower() or "sfp" in s.lower() for s in sources), (
-        f"Sources trouvées : {sources}"
+        f"Sources found: {sources}"
     )
 
 
 def test_format_context_empty():
     result = format_context([])
-    assert "Aucun" in result
+    assert "No medical context" in result
 
 
 def test_format_context_contains_excerpt(index, mock_embed_model):
     with patch("app.rag.indexer._get_embed_model", return_value=mock_embed_model):
-        nodes = retrieve_context(query="biberon", top_k=2, index=index)
+        nodes = retrieve_context(query="bottle", top_k=2, index=index)
     formatted = format_context(nodes)
-    assert "Extrait" in formatted
+    assert "Excerpt" in formatted
     assert "score" in formatted
 
 
-# ─── Tests résumé biberons ────────────────────────────────────────────────────
+# ─── Feeding summary tests ────────────────────────────────────────────────────
 
 def test_summarize_feedings_empty():
-    assert "Aucun biberon" in _summarize_feedings([])
+    assert "No feedings" in _summarize_feedings([])
 
 
 def test_summarize_feedings_count(sample_feedings):
@@ -173,11 +173,11 @@ def test_summarize_feedings_total_volume(sample_feedings):
 
 def test_summarize_feedings_type_label(sample_feedings):
     result = _summarize_feedings(sample_feedings)
-    assert "biberon" in result.lower()
+    assert "bottle" in result.lower()
 
 
 def test_summarize_mixed_feedings(sample_baby):
-    """Alimentation mixte (bottle + breastfeeding) doit afficher 'mixte'."""
+    """Mixed feeding (bottle + breastfeeding) should show 'mixed'."""
     feedings = [
         Feeding(id=1, baby_id=1, fed_at=datetime(2026, 2, 23, 8), quantity_ml=100,
                 feeding_type="bottle", created_at=datetime(2026, 2, 23, 8)),
@@ -185,12 +185,12 @@ def test_summarize_mixed_feedings(sample_baby):
                 feeding_type="breastfeeding", created_at=datetime(2026, 2, 23, 11)),
     ]
     result = _summarize_feedings(feedings)
-    assert "mixte" in result.lower()
+    assert "mixed" in result.lower()
 
 
-# ─── Tests analyzer (mock Anthropic) ─────────────────────────────────────────
+# ─── Analyzer tests (mock Anthropic) ─────────────────────────────────────────
 
-def _mock_claude_response(text: str = "### ✅ Tout va bien."):
+def _mock_claude_response(text: str = "### ✅ All looks good."):
     mock_response = MagicMock()
     mock_response.content = [MagicMock(text=text)]
     mock_response.usage = MagicMock(output_tokens=42)
@@ -203,14 +203,14 @@ def test_analyze_feedings_returns_string(sample_baby, sample_feedings, index):
         result = analyze_feedings(
             baby=sample_baby,
             feedings=sample_feedings,
-            period_label="journée du 23/02/2026",
+            period_label="day of 23/02/2026",
             index=index,
         )
     assert isinstance(result, str) and len(result) > 0
 
 
 def test_analyze_feedings_prompt_has_baby_name(sample_baby, sample_feedings, index):
-    """Le prompt envoyé à Claude doit contenir le nom du bébé."""
+    """The prompt sent to Claude must contain the baby's name."""
     captured = []
 
     def capture(**kwargs):
@@ -225,17 +225,17 @@ def test_analyze_feedings_prompt_has_baby_name(sample_baby, sample_feedings, ind
 
 
 def test_analyze_feedings_empty_list(sample_baby, index):
-    """analyzer ne doit pas planter si la liste de biberons est vide."""
+    """analyzer must not crash if the feeding list is empty."""
     with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response(
-            "Aucun biberon enregistré."
+            "No feedings recorded."
         )
         result = analyze_feedings(baby=sample_baby, feedings=[], index=index)
     assert isinstance(result, str)
 
 
 def test_analyze_feedings_rag_failure_graceful(sample_baby, sample_feedings):
-    """Si le RAG échoue, l'analyse doit quand même se faire (sans contexte)."""
+    """If RAG fails, analysis should still proceed (without context)."""
     with patch("app.rag.analyzer.retrieve_context", side_effect=Exception("RAG KO")), \
          patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response()

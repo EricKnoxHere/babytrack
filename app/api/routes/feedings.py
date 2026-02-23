@@ -1,4 +1,4 @@
-"""Endpoints pour les biberons / allaitements."""
+"""Endpoints for feedings / breastfeedings."""
 
 from datetime import date
 from typing import Optional
@@ -14,13 +14,13 @@ router = APIRouter(prefix="/feedings", tags=["feedings"])
 
 @router.post("", response_model=Feeding, status_code=status.HTTP_201_CREATED)
 async def add_feeding(payload: FeedingCreate, db: DbDep) -> Feeding:
-    """Enregistre un biberon ou un allaitement."""
-    # Vérifier que le bébé existe
+    """Record a bottle feeding or breastfeeding session."""
+    # Verify the baby exists
     baby = await baby_service.get_baby(db, payload.baby_id)
     if not baby:
         raise HTTPException(
             status_code=404,
-            detail=f"Bébé {payload.baby_id} introuvable",
+            detail=f"Baby {payload.baby_id} not found",
         )
     return await feeding_service.add_feeding(db, payload)
 
@@ -29,27 +29,27 @@ async def add_feeding(payload: FeedingCreate, db: DbDep) -> Feeding:
 async def get_feedings(
     baby_id: int,
     db: DbDep,
-    day: Optional[date] = Query(None, description="Filtrer par jour (YYYY-MM-DD)"),
-    start: Optional[date] = Query(None, description="Début de plage (YYYY-MM-DD)"),
-    end: Optional[date] = Query(None, description="Fin de plage (YYYY-MM-DD)"),
+    day: Optional[date] = Query(None, description="Filter by day (YYYY-MM-DD)"),
+    start: Optional[date] = Query(None, description="Range start (YYYY-MM-DD)"),
+    end: Optional[date] = Query(None, description="Range end (YYYY-MM-DD)"),
 ) -> list[Feeding]:
     """
-    Retourne les biberons d'un bébé.
+    Return feedings for a baby.
 
-    - Sans paramètre : tout l'historique
-    - `?day=YYYY-MM-DD` : une journée précise
-    - `?start=YYYY-MM-DD&end=YYYY-MM-DD` : une plage de dates
+    - No parameter: full history
+    - `?day=YYYY-MM-DD`: a specific day
+    - `?start=YYYY-MM-DD&end=YYYY-MM-DD`: a date range
     """
-    # Vérifier que le bébé existe
+    # Verify the baby exists
     baby = await baby_service.get_baby(db, baby_id)
     if not baby:
-        raise HTTPException(status_code=404, detail=f"Bébé {baby_id} introuvable")
+        raise HTTPException(status_code=404, detail=f"Baby {baby_id} not found")
 
     if day:
         return await feeding_service.get_feedings_by_day(db, baby_id, day)
     if start and end:
         if end < start:
-            raise HTTPException(status_code=400, detail="'end' doit être >= 'start'")
+            raise HTTPException(status_code=400, detail="'end' must be >= 'start'")
         return await feeding_service.get_feedings_by_range(db, baby_id, start, end)
 
     return await feeding_service.get_feedings_by_baby(db, baby_id)
@@ -57,7 +57,7 @@ async def get_feedings(
 
 @router.delete("/{feeding_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_feeding(feeding_id: int, db: DbDep) -> None:
-    """Supprime un biberon."""
+    """Delete a feeding record."""
     deleted = await feeding_service.delete_feeding(db, feeding_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Biberon {feeding_id} introuvable")
+        raise HTTPException(status_code=404, detail=f"Feeding {feeding_id} not found")

@@ -1,4 +1,4 @@
-"""CRUD async pour les biberons / allaitements."""
+"""Async CRUD operations for feedings / breastfeeding sessions."""
 
 from datetime import date, datetime
 
@@ -20,7 +20,7 @@ def _row_to_feeding(row: aiosqlite.Row) -> Feeding:
 
 
 async def add_feeding(db: aiosqlite.Connection, feeding: FeedingCreate) -> Feeding:
-    """Enregistre un biberon / allaitement et retourne l'enregistrement complet."""
+    """Record a feeding session and return the full record."""
     cursor = await db.execute(
         """INSERT INTO feedings (baby_id, fed_at, quantity_ml, feeding_type, notes)
            VALUES (?, ?, ?, ?, ?)""",
@@ -40,14 +40,14 @@ async def add_feeding(db: aiosqlite.Connection, feeding: FeedingCreate) -> Feedi
 
 
 async def get_feeding(db: aiosqlite.Connection, feeding_id: int) -> Feeding | None:
-    """Retourne un biberon par son id, ou None."""
+    """Return a feeding by id, or None."""
     async with db.execute("SELECT * FROM feedings WHERE id = ?", (feeding_id,)) as cur:
         row = await cur.fetchone()
     return _row_to_feeding(row) if row else None
 
 
 async def get_feedings_by_baby(db: aiosqlite.Connection, baby_id: int) -> list[Feeding]:
-    """Retourne tous les biberons d'un bébé, du plus récent au plus ancien."""
+    """Return all feedings for a baby, most recent first."""
     rows = await db.execute_fetchall(
         "SELECT * FROM feedings WHERE baby_id = ? ORDER BY fed_at DESC", (baby_id,)
     )
@@ -57,7 +57,7 @@ async def get_feedings_by_baby(db: aiosqlite.Connection, baby_id: int) -> list[F
 async def get_feedings_by_day(
     db: aiosqlite.Connection, baby_id: int, day: date
 ) -> list[Feeding]:
-    """Retourne les biberons d'un bébé pour un jour donné (date locale)."""
+    """Return feedings for a baby on a given day (local date)."""
     day_str = day.isoformat()  # 'YYYY-MM-DD'
     rows = await db.execute_fetchall(
         """SELECT * FROM feedings
@@ -72,7 +72,7 @@ async def get_feedings_by_day(
 async def get_feedings_by_range(
     db: aiosqlite.Connection, baby_id: int, start: date, end: date
 ) -> list[Feeding]:
-    """Retourne les biberons entre start (inclus) et end (inclus)."""
+    """Return feedings between start (inclusive) and end (inclusive)."""
     rows = await db.execute_fetchall(
         """SELECT * FROM feedings
            WHERE baby_id = ?
@@ -85,7 +85,7 @@ async def get_feedings_by_range(
 
 
 async def delete_feeding(db: aiosqlite.Connection, feeding_id: int) -> bool:
-    """Supprime un biberon. Retourne True si supprimé."""
+    """Delete a feeding. Returns True if deleted."""
     cursor = await db.execute("DELETE FROM feedings WHERE id = ?", (feeding_id,))
     await db.commit()
     return cursor.rowcount > 0

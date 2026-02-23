@@ -1,4 +1,4 @@
-"""Initialisation SQLite et gestion des connexions async via aiosqlite."""
+"""SQLite initialization and async connection management via aiosqlite."""
 
 import os
 from collections.abc import AsyncGenerator
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS feedings (
 
 
 async def create_tables(db_url: str = DATABASE_URL) -> None:
-    """Crée les tables babies et feedings si elles n'existent pas."""
+    """Create the babies and feedings tables if they don't exist."""
     os.makedirs(os.path.dirname(db_url) if os.path.dirname(db_url) else ".", exist_ok=True)
     async with aiosqlite.connect(db_url) as db:
         await db.execute("PRAGMA foreign_keys = ON")
@@ -43,7 +43,7 @@ async def create_tables(db_url: str = DATABASE_URL) -> None:
 
 @asynccontextmanager
 async def get_db(db_url: str = DATABASE_URL) -> AsyncGenerator[aiosqlite.Connection, None]:
-    """Context manager qui fournit une connexion SQLite avec foreign keys activées."""
+    """Context manager that provides a SQLite connection with foreign keys enabled."""
     async with aiosqlite.connect(db_url) as db:
         db.row_factory = aiosqlite.Row
         await db.execute("PRAGMA foreign_keys = ON")

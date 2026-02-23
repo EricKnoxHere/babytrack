@@ -1,7 +1,7 @@
-"""BabyTrack — Dashboard Streamlit.
+"""BabyTrack — Streamlit Dashboard.
 
-Lancer : streamlit run ui/app.py
-         (l'API doit tourner sur localhost:8000)
+Run: streamlit run ui/app.py
+     (API must be running on localhost:8000)
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import streamlit as st
 import ui.api_client as api
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Config globale
+# Global config
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.set_page_config(
@@ -28,11 +28,11 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Utilitaires
+# Utilities
 # ─────────────────────────────────────────────────────────────────────────────
 
 def api_ok() -> bool:
-    """Vérifie que l'API répond."""
+    """Checks that the API is responding."""
     try:
         h = api.health()
         return h.get("status") == "ok"
@@ -41,54 +41,54 @@ def api_ok() -> bool:
 
 
 def feeding_type_label(t: str) -> str:
-    return {"bottle": "🍼 Biberon", "breastfeeding": "🤱 Allaitement"}.get(t, t)
+    return {"bottle": "🍼 Bottle", "breastfeeding": "🤱 Breastfeeding"}.get(t, t)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sidebar — sélection du bébé
+# Sidebar — baby selection
 # ─────────────────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.title("🍼 BabyTrack")
-    st.caption("Suivi d'alimentation nourrisson · RAG + Claude")
+    st.caption("Infant feeding tracker · RAG + Claude")
     st.divider()
 
-    # Statut API
+    # API status
     if not api_ok():
-        st.error("❌ API hors ligne\n\n`uvicorn main:app --reload`")
+        st.error("❌ API offline\n\n`uvicorn main:app --reload`")
         st.stop()
 
     rag_status = api.health().get("rag_available", False)
-    st.caption(f"RAG : {'✅ actif' if rag_status else '⚠️ inactif (analyse sans contexte)'}")
+    st.caption(f"RAG: {'✅ active' if rag_status else '⚠️ inactive (analysis without context)'}")
     st.divider()
 
-    # Chargement des bébés
+    # Load babies
     try:
         babies = api.list_babies()
     except Exception as e:
-        st.error(f"Impossible de charger les bébés : {e}")
+        st.error(f"Could not load babies: {e}")
         st.stop()
 
-    # Sélecteur ou création
-    st.subheader("👶 Bébé")
-    mode = st.radio("", ["Sélectionner", "Créer"], horizontal=True, label_visibility="collapsed")
+    # Selector or creation
+    st.subheader("👶 Baby")
+    mode = st.radio("", ["Select", "Create"], horizontal=True, label_visibility="collapsed")
 
-    if mode == "Créer":
+    if mode == "Create":
         with st.form("new_baby"):
-            baby_name = st.text_input("Prénom")
-            baby_dob = st.date_input("Date de naissance", value=date.today() - timedelta(days=30))
-            baby_weight = st.number_input("Poids de naissance (g)", min_value=500, max_value=6000, value=3300)
-            if st.form_submit_button("✅ Créer"):
+            baby_name = st.text_input("First name")
+            baby_dob = st.date_input("Date of birth", value=date.today() - timedelta(days=30))
+            baby_weight = st.number_input("Birth weight (g)", min_value=500, max_value=6000, value=3300)
+            if st.form_submit_button("✅ Create"):
                 try:
                     baby = api.create_baby(baby_name, baby_dob, int(baby_weight))
-                    st.success(f"Bébé **{baby['name']}** créé !")
+                    st.success(f"Baby **{baby['name']}** created!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erreur : {e}")
+                    st.error(f"Error: {e}")
         st.stop()
 
     if not babies:
-        st.info("Aucun bébé enregistré. Crée-en un d'abord.")
+        st.info("No babies registered. Create one first.")
         st.stop()
 
     baby_options = {f"{b['name']} (id {b['id']})": b for b in babies}
@@ -99,29 +99,29 @@ with st.sidebar:
     st.subheader("📅 Navigation")
     page = st.radio(
         "",
-        ["🍼 Saisie rapide", "📊 Tableau de bord", "🤖 Analyse IA"],
+        ["🍼 Quick entry", "📊 Dashboard", "🤖 AI Analysis"],
         label_visibility="collapsed",
     )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE 1 — Saisie rapide
+# PAGE 1 — Quick entry
 # ─────────────────────────────────────────────────────────────────────────────
 
-if page == "🍼 Saisie rapide":
-    st.header(f"🍼 Saisie — {selected_baby['name']}")
+if page == "🍼 Quick entry":
+    st.header(f"🍼 Log feeding — {selected_baby['name']}")
 
     with st.form("add_feeding"):
         col1, col2 = st.columns(2)
         with col1:
             fed_date = st.date_input("Date", value=date.today())
-            fed_time = st.time_input("Heure", value=datetime.now().time())
+            fed_time = st.time_input("Time", value=datetime.now().time())
         with col2:
-            quantity = st.number_input("Quantité (ml)", min_value=1, max_value=500, value=90, step=5)
+            quantity = st.number_input("Quantity (ml)", min_value=1, max_value=500, value=90, step=5)
             f_type = st.selectbox("Type", ["bottle", "breastfeeding"],
                                   format_func=feeding_type_label)
-        notes = st.text_input("Notes (optionnel)", placeholder="ex: un peu agité après")
+        notes = st.text_input("Notes (optional)", placeholder="e.g. a bit fussy afterwards")
 
-        submitted = st.form_submit_button("✅ Enregistrer", use_container_width=True)
+        submitted = st.form_submit_button("✅ Save", use_container_width=True)
 
     if submitted:
         fed_at = datetime.combine(fed_date, fed_time).isoformat()
@@ -133,13 +133,13 @@ if page == "🍼 Saisie rapide":
                 feeding_type=f_type,
                 notes=notes or None,
             )
-            st.success(f"✅ Biberon enregistré : **{feeding['quantity_ml']} ml** à **{fed_time.strftime('%H:%M')}**")
+            st.success(f"✅ Feeding saved: **{feeding['quantity_ml']} ml** at **{fed_time.strftime('%H:%M')}**")
         except requests.HTTPError as e:
-            st.error(f"Erreur API : {e.response.json().get('detail', str(e))}")
+            st.error(f"API error: {e.response.json().get('detail', str(e))}")
 
-    # Aperçu du jour
+    # Today's overview
     st.divider()
-    st.subheader(f"Biberons du {date.today().strftime('%d/%m/%Y')}")
+    st.subheader(f"Feedings on {date.today().strftime('%d/%m/%Y')}")
     try:
         today_feedings = api.get_feedings(selected_baby["id"], day=date.today())
     except Exception:
@@ -147,42 +147,42 @@ if page == "🍼 Saisie rapide":
 
     if today_feedings:
         total = sum(f["quantity_ml"] for f in today_feedings)
-        st.metric("Total aujourd'hui", f"{total} ml", f"{len(today_feedings)} prise(s)")
+        st.metric("Total today", f"{total} ml", f"{len(today_feedings)} feeding(s)")
         for f in sorted(today_feedings, key=lambda x: x["fed_at"]):
             t = datetime.fromisoformat(f["fed_at"]).strftime("%H:%M")
             icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
             note = f" — _{f['notes']}_" if f.get("notes") else ""
             st.markdown(f"- `{t}` {icon} **{f['quantity_ml']} ml**{note}")
     else:
-        st.info("Aucun biberon enregistré aujourd'hui.")
+        st.info("No feedings recorded today.")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE 2 — Tableau de bord
+# PAGE 2 — Dashboard
 # ─────────────────────────────────────────────────────────────────────────────
 
-elif page == "📊 Tableau de bord":
-    st.header(f"📊 Tableau de bord — {selected_baby['name']}")
+elif page == "📊 Dashboard":
+    st.header(f"📊 Dashboard — {selected_baby['name']}")
 
-    # Sélecteur de plage
+    # Date range selector
     col1, col2 = st.columns([2, 1])
     with col1:
-        end_date = st.date_input("Jusqu'au", value=date.today())
+        end_date = st.date_input("Up to", value=date.today())
     with col2:
-        nb_days = st.selectbox("Période", [7, 14, 30], format_func=lambda n: f"{n} jours")
+        nb_days = st.selectbox("Period", [7, 14, 30], format_func=lambda n: f"{n} days")
 
     start_date = end_date - timedelta(days=nb_days - 1)
 
     try:
         feedings = api.get_feedings(selected_baby["id"], start=start_date, end=end_date)
     except Exception as e:
-        st.error(f"Impossible de charger les biberons : {e}")
+        st.error(f"Could not load feedings: {e}")
         feedings = []
 
     if not feedings:
-        st.info("Aucune donnée sur cette période.")
+        st.info("No data for this period.")
         st.stop()
 
-    # Préparer les données par jour
+    # Aggregate data by day
     from collections import defaultdict
     daily: dict[str, dict] = defaultdict(lambda: {"total_ml": 0, "count": 0})
     for f in feedings:
@@ -197,7 +197,7 @@ elif page == "📊 Tableau de bord":
     totals = [daily[d]["total_ml"] for d in days_range]
     counts = [daily[d]["count"] for d in days_range]
 
-    # ── Graphique 1 : volume par jour ──────────────────────────────────────
+    # ── Chart 1: volume per day ─────────────────────────────────────────────
     fig_vol = go.Figure()
     fig_vol.add_bar(
         x=days_range, y=totals, name="Volume (ml)",
@@ -205,57 +205,57 @@ elif page == "📊 Tableau de bord":
         text=totals, textposition="outside",
     )
     fig_vol.update_layout(
-        title="Volume total par jour (ml)",
+        title="Total volume per day (ml)",
         xaxis_title="Date", yaxis_title="ml",
         xaxis=dict(tickformat="%d/%m"),
         height=350, margin=dict(t=50, b=30),
     )
     st.plotly_chart(fig_vol, use_container_width=True)
 
-    # ── Graphique 2 : nombre de prises ────────────────────────────────────
+    # ── Chart 2: number of feedings ────────────────────────────────────────
     col_a, col_b = st.columns(2)
     with col_a:
         fig_count = go.Figure()
         fig_count.add_bar(
-            x=days_range, y=counts, name="Nombre de prises",
+            x=days_range, y=counts, name="Number of feedings",
             marker_color="#7BC67E",
             text=counts, textposition="outside",
         )
         fig_count.update_layout(
-            title="Nombre de prises par jour",
+            title="Number of feedings per day",
             xaxis=dict(tickformat="%d/%m"),
             height=300, margin=dict(t=50, b=30),
         )
         st.plotly_chart(fig_count, use_container_width=True)
 
     with col_b:
-        # Répartition biberon vs allaitement
+        # Bottle vs breastfeeding breakdown
         type_counts = {"bottle": 0, "breastfeeding": 0}
         for f in feedings:
             type_counts[f["feeding_type"]] += 1
         fig_pie = px.pie(
-            names=["🍼 Biberon", "🤱 Allaitement"],
+            names=["🍼 Bottle", "🤱 Breastfeeding"],
             values=list(type_counts.values()),
-            title="Répartition des types",
+            title="Feeding type breakdown",
             color_discrete_sequence=["#4F86C6", "#F4A460"],
         )
         fig_pie.update_layout(height=300, margin=dict(t=50, b=30))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ── Métriques globales ─────────────────────────────────────────────────
+    # ── Global metrics ─────────────────────────────────────────────────────
     st.divider()
     total_ml = sum(f["quantity_ml"] for f in feedings)
     avg_per_day = total_ml / nb_days if nb_days else 0
     avg_per_feeding = total_ml / len(feedings) if feedings else 0
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total période", f"{total_ml} ml")
-    m2.metric("Moyenne / jour", f"{avg_per_day:.0f} ml")
-    m3.metric("Moyenne / prise", f"{avg_per_feeding:.0f} ml")
-    m4.metric("Nombre de prises", len(feedings))
+    m1.metric("Period total", f"{total_ml} ml")
+    m2.metric("Average / day", f"{avg_per_day:.0f} ml")
+    m3.metric("Average / feeding", f"{avg_per_feeding:.0f} ml")
+    m4.metric("Total feedings", len(feedings))
 
-    # ── Timeline détaillée ─────────────────────────────────────────────────
-    with st.expander("📋 Détail des prises"):
+    # ── Detailed timeline ──────────────────────────────────────────────────
+    with st.expander("📋 Feeding detail"):
         for f in sorted(feedings, key=lambda x: x["fed_at"], reverse=True):
             dt = datetime.fromisoformat(f["fed_at"])
             icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
@@ -265,32 +265,32 @@ elif page == "📊 Tableau de bord":
             )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE 3 — Analyse IA
+# PAGE 3 — AI Analysis
 # ─────────────────────────────────────────────────────────────────────────────
 
-elif page == "🤖 Analyse IA":
-    st.header(f"🤖 Analyse IA — {selected_baby['name']}")
-    st.caption("Propulsé par Claude · Contexte médical OMS/SFP via RAG")
+elif page == "🤖 AI Analysis":
+    st.header(f"🤖 AI Analysis — {selected_baby['name']}")
+    st.caption("Powered by Claude · WHO/SFP medical context via RAG")
 
     col1, col2 = st.columns(2)
     with col1:
-        period = st.radio("Période", ["day", "week"],
-                          format_func=lambda p: "📅 Journée" if p == "day" else "📆 Semaine",
+        period = st.radio("Period", ["day", "week"],
+                          format_func=lambda p: "📅 Day" if p == "day" else "📆 Week",
                           horizontal=True)
     with col2:
-        ref_date = st.date_input("Date de référence", value=date.today())
+        ref_date = st.date_input("Reference date", value=date.today())
 
-    analyze_btn = st.button("🔍 Analyser", use_container_width=True, type="primary")
+    analyze_btn = st.button("🔍 Analyse", use_container_width=True, type="primary")
 
     if analyze_btn:
-        with st.spinner("Claude analyse les données..."):
+        with st.spinner("Claude is analysing the data..."):
             try:
                 result = api.get_analysis(
                     baby_id=selected_baby["id"],
                     period=period,
                     reference_date=ref_date,
                 )
-                st.success(f"Analyse générée pour : **{result['period_label']}**")
+                st.success(f"Analysis generated for: **{result['period_label']}**")
                 st.divider()
                 st.markdown(result["analysis"])
             except requests.HTTPError as e:
@@ -298,6 +298,6 @@ elif page == "🤖 Analyse IA":
                 if e.response.status_code == 404:
                     st.warning(f"⚠️ {detail}")
                 else:
-                    st.error(f"Erreur : {detail}")
+                    st.error(f"Error: {detail}")
             except Exception as e:
-                st.error(f"Erreur inattendue : {e}")
+                st.error(f"Unexpected error: {e}")

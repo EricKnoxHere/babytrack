@@ -1,4 +1,4 @@
-"""Recherche sémantique dans l'index vectoriel."""
+"""Semantic search in the vector index."""
 
 import logging
 from pathlib import Path
@@ -21,22 +21,22 @@ def retrieve_context(
     index_dir: Path = INDEX_DIR,
 ) -> list[NodeWithScore]:
     """
-    Recherche les passages les plus pertinents pour une query donnée.
+    Retrieves the most relevant passages for a given query.
 
     Args:
-        query: Question ou contexte à rechercher.
-        top_k: Nombre de passages à retourner.
-        index: Index pré-chargé (évite un rechargement si fourni).
-        index_dir: Dossier de l'index (utilisé si index=None).
+        query: Question or context to search for.
+        top_k: Number of passages to return.
+        index: Pre-loaded index (avoids a reload if provided).
+        index_dir: Index directory (used if index=None).
 
     Returns:
-        Liste de NodeWithScore triée par pertinence décroissante.
+        List of NodeWithScore sorted by descending relevance.
     """
     if index is None:
         try:
             index = load_index(index_dir)
         except FileNotFoundError:
-            logger.warning("Index absent — construction en cours...")
+            logger.warning("Index not found — building now...")
             index = build_index(index_dir=index_dir)
 
     retriever = index.as_retriever(similarity_top_k=top_k)
@@ -46,16 +46,16 @@ def retrieve_context(
 
 
 def format_context(nodes: list[NodeWithScore]) -> str:
-    """Formate les passages récupérés en un bloc de contexte pour le LLM."""
+    """Formats retrieved passages into a context block for the LLM."""
     if not nodes:
-        return "Aucun contexte médical disponible."
+        return "No medical context available."
 
     parts = []
     for i, node in enumerate(nodes, 1):
         score = f"{node.score:.3f}" if node.score is not None else "N/A"
-        source = node.metadata.get("file_name", "source inconnue")
+        source = node.metadata.get("file_name", "unknown source")
         parts.append(
-            f"--- Extrait {i} (source: {source}, score: {score}) ---\n"
+            f"--- Excerpt {i} (source: {source}, score: {score}) ---\n"
             f"{node.text.strip()}"
         )
     return "\n\n".join(parts)

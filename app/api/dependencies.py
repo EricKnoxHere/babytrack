@@ -1,4 +1,4 @@
-"""Dépendances FastAPI réutilisables (DB, index RAG)."""
+"""Reusable FastAPI dependencies (DB, RAG index)."""
 
 import logging
 from collections.abc import AsyncGenerator
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 async def db_dependency() -> AsyncGenerator[aiosqlite.Connection, None]:
-    """Fournit une connexion SQLite pour la durée de la requête."""
+    """Provide a SQLite connection for the duration of the request."""
     async with _get_db() as conn:
         yield conn
 
@@ -23,7 +23,7 @@ DbDep = Annotated[aiosqlite.Connection, Depends(db_dependency)]
 
 
 def get_rag_index(request: Request):
-    """Retourne l'index RAG depuis l'état de l'application (peut être None)."""
+    """Return the RAG index from application state (may be None)."""
     return getattr(request.app.state, "rag_index", None)
 
 

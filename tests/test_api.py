@@ -1,9 +1,9 @@
-"""Tests d'intégration de l'API FastAPI.
+"""FastAPI integration tests.
 
-Stratégie :
-- Base SQLite en mémoire partagée par tous les tests du module.
-- Lifespan du vrai app (main.py) — on override la dépendance DB.
-- analyze_feedings mocké pour ne pas appeler Claude / le réseau.
+Strategy:
+- Shared in-memory SQLite database for all tests in the module.
+- Real app lifespan (main.py) — DB dependency is overridden.
+- analyze_feedings is mocked to avoid calling Claude / the network.
 """
 
 from __future__ import annotations
@@ -20,12 +20,12 @@ from main import app
 
 
 # ---------------------------------------------------------------------------
-# Fixture : base SQLite en mémoire partagée pour tout le module
+# Fixture: shared in-memory SQLite for the entire module
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(scope="module")
 async def mem_db():
-    """Connexion SQLite en mémoire, réutilisée pour tous les tests du module."""
+    """In-memory SQLite connection, reused across all module tests."""
     async with aiosqlite.connect(":memory:") as conn:
         conn.row_factory = aiosqlite.Row
         await conn.execute("PRAGMA foreign_keys = ON")
@@ -37,13 +37,13 @@ async def mem_db():
 
 @pytest_asyncio.fixture(scope="module")
 async def client(mem_db: aiosqlite.Connection):
-    """Client HTTP de test avec DB in-memory et RAG mocké."""
+    """HTTP test client with in-memory DB and mocked RAG."""
 
     async def override_db():
         yield mem_db
 
     app.dependency_overrides[db_dependency] = override_db
-    app.state.rag_index = None  # pas d'index RAG en test
+    app.state.rag_index = None  # no RAG index in tests
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
@@ -79,7 +79,7 @@ async def test_create_baby(client: AsyncClient):
 
 
 async def test_create_baby_invalid(client: AsyncClient):
-    """Champ manquant → 422."""
+    """Missing required field → 422."""
     resp = await client.post("/babies", json={"name": "X"})
     assert resp.status_code == 422
 
@@ -141,7 +141,7 @@ async def test_add_feeding_unknown_baby(client: AsyncClient):
 
 
 async def test_add_second_feeding(client: AsyncClient):
-    """Second biberon pour avoir des données suffisantes pour /feedings/{id}."""
+    """Second feeding to have enough data for /feedings/{id}."""
     resp = await client.post(
         "/feedings",
         json={
@@ -192,7 +192,7 @@ async def test_get_feedings_baby_not_found(client: AsyncClient):
 # /analysis
 # ---------------------------------------------------------------------------
 
-MOCK_ANALYSIS = "✅ Analyse simulée : tout va bien !"
+MOCK_ANALYSIS = "✅ Simulated analysis: all looks good!"
 
 
 async def test_analysis_day(client: AsyncClient):
@@ -201,7 +201,7 @@ async def test_analysis_day(client: AsyncClient):
     assert resp.status_code == 200
     data = resp.json()
     assert data["baby_id"] == 1
-    assert data["baby_name"] == "Léna"  # nom mis à jour via PATCH
+    assert data["baby_name"] == "Léna"  # name updated via PATCH
     assert data["period"] == "day"
     assert data["analysis"] == MOCK_ANALYSIS
 
@@ -214,7 +214,7 @@ async def test_analysis_week(client: AsyncClient):
 
 
 async def test_analysis_no_feedings(client: AsyncClient):
-    """Période sans biberon → 404."""
+    """Period with no feedings → 404."""
     resp = await client.get("/analysis/1?period=day&reference_date=2024-01-01")
     assert resp.status_code == 404
 
