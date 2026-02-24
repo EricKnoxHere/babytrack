@@ -23,12 +23,13 @@ The real point isn't the app. It's what building it required me to think about:
 
 | Feature | What you can do |
 |---------|-----------------|
-| **Feeding tracking** | Log bottle / breastfeeding with timestamps, volumes, notes. Edit / delete at any time. |
-| **Weight tracking** | Record growth checkpoints; foundation for growth curve analysis. |
-| **Trends & analytics** | Visualise 7–30 day feeding patterns. Daily totals, type breakdown, recent history. |
-| **AI analysis** | Claude powered. Grounded in WHO/SFP guidelines via RAG. Age-aware recommendations. |
-| **REST API** | Full CRUD on babies, feedings, weights. POST/PATCH/DELETE support. OpenAPI docs. |
-| **Eval framework** | LLM-as-judge rates Claude output quality. RAG vs baseline comparison. |
+| **📝 Feeding log** | Record bottle/breastfeeding with timestamps, volumes, notes. Edit or delete any entry. |
+| **⚖️ Weight tracking** | Log growth checkpoints. View historical data and trends. |
+| **📊 Analytics** | Visualise 7–30 day feeding patterns: volume trends, frequency, type breakdown. |
+| **📥 CSV export** | Download all feeding data for external analysis or sharing. |
+| **🤖 AI analysis** | Claude-powered recommendations grounded in WHO/SFP guidelines via RAG. Shows which medical documents were cited. |
+| **✅ Quality evaluation** | LLM-as-judge framework scores output quality. Demonstrates RAG value vs baseline. |
+| **🔌 REST API** | Full CRUD on babies, feedings, weights. OpenAPI auto-docs. Production-ready async architecture. |
 
 ---
 
@@ -124,11 +125,13 @@ This is a portfolio demo, but the architecture decisions reflect real deployment
 
 ## Features added in v0.4
 
-- ✅ Full CRUD for feedings (create, read, update, delete)
-- ✅ Weight tracking — growth monitoring data model
-- ✅ Streamlit UI overhaul — custom theme, better layout, edit/delete buttons
-- ✅ Eval framework — LLM-as-judge with RAG vs baseline scoring
-- ✅ README rewrite — SA/business-focused narrative
+- ✅ **Full CRUD for feedings** — create, read, update, delete with inline edit forms
+- ✅ **Weight tracking** — record growth checkpoints, view history
+- ✅ **CSV export** — download feeding data for external analysis
+- ✅ **RAG source attribution** — see which medical guideline each recommendation comes from
+- ✅ **Streamlit UI overhaul** — custom theme, responsive layout, edit/delete buttons, tabs for different data types
+- ✅ **Eval framework** — LLM-as-judge scoring on 5 criteria; RAG vs baseline comparison
+- ✅ **README rewrite** — SA/business-focused narrative + architecture diagrams
 
 ---
 
