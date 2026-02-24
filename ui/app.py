@@ -352,11 +352,22 @@ elif page == "📊 Dashboard":
     avg_per_day = total_ml / nb_days if nb_days else 0
     avg_per_feeding = total_ml / len(feedings) if feedings else 0
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total volume", f"{total_ml} ml", "📊")
-    m2.metric("Daily average", f"{avg_per_day:.0f} ml", "📈")
-    m3.metric("Per feeding avg", f"{avg_per_feeding:.0f} ml", "🍼")
-    m4.metric("Num feedings", len(feedings), "📝")
+    col_m1, col_m2, col_m3, col_m4, col_export = st.columns([1.5, 1.5, 1.5, 1, 1.5])
+    col_m1.metric("Total volume", f"{total_ml} ml", "📊")
+    col_m2.metric("Daily average", f"{avg_per_day:.0f} ml", "📈")
+    col_m3.metric("Per feeding avg", f"{avg_per_feeding:.0f} ml", "🍼")
+    col_m4.metric("Feedings", len(feedings), "📝")
+    
+    with col_export:
+        st.write("")  # spacing
+        csv_data = api.feedings_to_csv(feedings)
+        st.download_button(
+            label="📥 CSV",
+            data=csv_data,
+            file_name=f"feedings_{start_date}_{end_date}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
 
     st.divider()
 

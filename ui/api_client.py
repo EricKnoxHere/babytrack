@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 import os
 from datetime import date
+from io import StringIO
 from typing import Any, Optional
 
 import requests
@@ -143,6 +145,44 @@ def get_analysis(
     if reference_date:
         params["reference_date"] = reference_date.isoformat()
     return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
+
+
+# ── Data export ───────────────────────────────────────────────────────
+
+
+def feedings_to_csv(feedings: list[dict]) -> str:
+    """Convert feedings list to CSV string."""
+    if not feedings:
+        return ""
+    
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["fed_at", "quantity_ml", "feeding_type", "notes"])
+    writer.writeheader()
+    for f in feedings:
+        writer.writerow({
+            "fed_at": f["fed_at"],
+            "quantity_ml": f["quantity_ml"],
+            "feeding_type": f["feeding_type"],
+            "notes": f.get("notes", ""),
+        })
+    return output.getvalue()
+
+
+def weights_to_csv(weights: list[dict]) -> str:
+    """Convert weights list to CSV string."""
+    if not weights:
+        return ""
+    
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["measured_at", "weight_g", "notes"])
+    writer.writeheader()
+    for w in weights:
+        writer.writerow({
+            "measured_at": w["measured_at"],
+            "weight_g": w["weight_g"],
+            "notes": w.get("notes", ""),
+        })
+    return output.getvalue()
 
 
 # ── Health check ───────────────────────────────────────────────────────────
