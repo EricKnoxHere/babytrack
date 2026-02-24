@@ -10,7 +10,7 @@ load_dotenv()  # load .env before anything reads os.getenv()
 
 from fastapi import FastAPI
 
-from app.api.routes import analysis_router, babies_router, feedings_router, health_router
+from app.api.routes import analysis_router, babies_router, feedings_router, health_router, weights_router
 from app.rag.indexer import INDEX_DIR, load_index
 from app.services.database import create_tables
 
@@ -60,4 +60,5 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(babies_router)
 app.include_router(feedings_router)
+app.include_router(weights_router)
 app.include_router(analysis_router)

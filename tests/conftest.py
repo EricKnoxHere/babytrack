@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 import aiosqlite
 
-from app.services.database import _CREATE_BABIES, _CREATE_FEEDINGS
+from app.services.database import _CREATE_BABIES, _CREATE_FEEDINGS, _CREATE_WEIGHTS
 
 
 @pytest_asyncio.fixture
@@ -15,5 +15,6 @@ async def db():
         await conn.execute("PRAGMA foreign_keys = ON")
         await conn.execute(_CREATE_BABIES)
         await conn.execute(_CREATE_FEEDINGS)
+        await conn.execute(_CREATE_WEIGHTS)
         await conn.commit()
         yield conn
