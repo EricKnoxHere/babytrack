@@ -15,7 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from unittest.mock import patch, MagicMock
 
 from app.api.dependencies import db_dependency
-from app.services.database import _CREATE_BABIES, _CREATE_FEEDINGS
+from app.services.database import _CREATE_ANALYSIS_REPORTS, _CREATE_BABIES, _CREATE_FEEDINGS, _CREATE_WEIGHTS
 from main import app
 
 
@@ -31,6 +31,8 @@ async def mem_db():
         await conn.execute("PRAGMA foreign_keys = ON")
         await conn.execute(_CREATE_BABIES)
         await conn.execute(_CREATE_FEEDINGS)
+        await conn.execute(_CREATE_WEIGHTS)
+        await conn.execute(_CREATE_ANALYSIS_REPORTS)
         await conn.commit()
         yield conn
 

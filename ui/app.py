@@ -561,3 +561,38 @@ elif page == "🤖 AI Analysis":
                     st.code(e.response.text or "(empty)")
             except Exception as e:
                 st.error(f"Unexpected error: {e}")
+
+    # ── Past analyses ─────────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("🗂️ Past analyses")
+
+    try:
+        history = api.list_analysis_history(selected_baby["id"], limit=15)
+    except Exception:
+        history = []
+
+    if not history:
+        st.info("No analyses saved yet. Run your first analysis above.")
+    else:
+        for report_summary in history:
+            created = datetime.fromisoformat(report_summary["created_at"])
+            label = f"{'📅' if report_summary['period'] == 'day' else '📆'} {report_summary['period_label']} · {created.strftime('%d/%m/%Y %H:%M')}"
+
+            col_r, col_del = st.columns([10, 1])
+            with col_r:
+                with st.expander(label):
+                    try:
+                        full = api.get_analysis_report(selected_baby["id"], report_summary["id"])
+                        st.markdown(full["analysis"])
+                        if full.get("sources"):
+                            st.divider()
+                            st.caption("📚 Sources: " + " · ".join(s["source"] for s in full["sources"]))
+                    except Exception as e:
+                        st.error(f"Could not load report: {e}")
+            with col_del:
+                if st.button("🗑️", key=f"del_report_{report_summary['id']}", help="Delete"):
+                    try:
+                        api.delete_analysis_report(selected_baby["id"], report_summary["id"])
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")

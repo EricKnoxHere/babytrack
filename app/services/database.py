@@ -8,7 +8,7 @@ import aiosqlite
 
 DATABASE_URL = os.getenv("DATABASE_URL", "data/babytrack.db")
 
-__all__ = ["DATABASE_URL", "create_tables", "get_db", "_CREATE_BABIES", "_CREATE_FEEDINGS", "_CREATE_WEIGHTS"]
+__all__ = ["DATABASE_URL", "create_tables", "get_db", "_CREATE_BABIES", "_CREATE_FEEDINGS", "_CREATE_WEIGHTS", "_CREATE_ANALYSIS_REPORTS"]
 
 _CREATE_BABIES = """
 CREATE TABLE IF NOT EXISTS babies (
@@ -43,15 +43,28 @@ CREATE TABLE IF NOT EXISTS weight_entries (
 )
 """
 
+_CREATE_ANALYSIS_REPORTS = """
+CREATE TABLE IF NOT EXISTS analysis_reports (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    baby_id      INTEGER NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
+    period       TEXT    NOT NULL CHECK(period IN ('day', 'week')),
+    period_label TEXT    NOT NULL,
+    analysis     TEXT    NOT NULL,
+    sources_json TEXT    NOT NULL DEFAULT '[]',
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
 
 async def create_tables(db_url: str = DATABASE_URL) -> None:
-    """Create the babies, feedings, and weight_entries tables if they don't exist."""
+    """Create all application tables if they don't exist."""
     os.makedirs(os.path.dirname(db_url) if os.path.dirname(db_url) else ".", exist_ok=True)
     async with aiosqlite.connect(db_url) as db:
         await db.execute("PRAGMA foreign_keys = ON")
         await db.execute(_CREATE_BABIES)
         await db.execute(_CREATE_FEEDINGS)
         await db.execute(_CREATE_WEIGHTS)
+        await db.execute(_CREATE_ANALYSIS_REPORTS)
         await db.commit()
 
 

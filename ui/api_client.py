@@ -147,6 +147,22 @@ def get_analysis(
     return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
 
 
+def list_analysis_history(baby_id: int, limit: int = 20) -> list[dict]:
+    """Return the list of past analysis report summaries."""
+    return _get(f"/analysis/{baby_id}/history", params={"limit": limit})
+
+
+def get_analysis_report(baby_id: int, report_id: int) -> dict:
+    """Return the full text of a specific past analysis report."""
+    return _get(f"/analysis/{baby_id}/history/{report_id}")
+
+
+def delete_analysis_report(baby_id: int, report_id: int) -> None:
+    """Delete a past analysis report."""
+    resp = requests.delete(f"{API_BASE}/analysis/{baby_id}/history/{report_id}", timeout=TIMEOUT)
+    resp.raise_for_status()
+
+
 # ── Data export ───────────────────────────────────────────────────────
 
 
