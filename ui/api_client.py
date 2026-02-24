@@ -99,6 +99,38 @@ def _request(method: str, path: str, payload: dict) -> dict:
     return resp.json()
 
 
+# ── Weights ───────────────────────────────────────────────────────────
+
+
+def add_weight(
+    baby_id: int,
+    measured_at: str,
+    weight_g: int,
+    notes: Optional[str] = None,
+) -> dict:
+    payload: dict = {
+        "baby_id": baby_id,
+        "measured_at": measured_at,
+        "weight_g": weight_g,
+    }
+    if notes:
+        payload["notes"] = notes
+    return _post("/weights", payload)
+
+
+def get_weights(
+    baby_id: int,
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+) -> list[dict]:
+    params: dict = {}
+    if start:
+        params["start"] = start.isoformat()
+    if end:
+        params["end"] = end.isoformat()
+    return _get(f"/weights/{baby_id}", params=params)
+
+
 # ── AI Analysis ────────────────────────────────────────────────────────────
 
 

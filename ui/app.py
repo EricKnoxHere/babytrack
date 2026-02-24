@@ -217,16 +217,17 @@ with st.sidebar:
 if page == "🍼 Quick entry":
     st.header(f"🍼 Log feeding — {selected_baby['name']}")
 
-    col1, col2 = st.columns(2)
-    with col1:
+    tab_feed, tab_weight = st.tabs(["🍼 Feeding", "⚖️ Weight"])
+
+    with tab_feed:
         st.subheader("Add new feeding")
         with st.form("add_feeding"):
-            fed_date = st.date_input("Date", value=date.today())
-            fed_time = st.time_input("Time", value=datetime.now().time())
-            quantity = st.number_input("Quantity (ml)", min_value=1, max_value=500, value=90, step=5)
-            f_type = st.selectbox("Type", ["bottle", "breastfeeding"], format_func=feeding_type_label)
-            notes = st.text_input("Notes (optional)", placeholder="e.g. baby seemed satisfied")
-            submitted = st.form_submit_button("✅ Save", use_container_width=True)
+            fed_date = st.date_input("Date", value=date.today(), key="feed_date")
+            fed_time = st.time_input("Time", value=datetime.now().time(), key="feed_time")
+            quantity = st.number_input("Quantity (ml)", min_value=1, max_value=500, value=90, step=5, key="feed_qty")
+            f_type = st.selectbox("Type", ["bottle", "breastfeeding"], format_func=feeding_type_label, key="feed_type")
+            notes = st.text_input("Notes (optional)", placeholder="e.g. baby seemed satisfied", key="feed_notes")
+            submitted = st.form_submit_button("✅ Save feeding", use_container_width=True)
 
         if submitted:
             fed_at = datetime.combine(fed_date, fed_time).isoformat()
@@ -246,9 +247,9 @@ if page == "🍼 Quick entry":
                     detail = e.response.text or str(e)
                 st.error(f"Error: {detail}")
 
-    # Today's overview
-    with col2:
-        st.subheader("Today's feedings")
+        # Today's overview
+        st.divider()
+        st.subheader(f"Today's feedings")
         try:
             today_feedings = api.get_feedings(selected_baby["id"], day=date.today())
         except Exception:
@@ -266,9 +267,48 @@ if page == "🍼 Quick entry":
         else:
             st.info("No feedings logged today yet.")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE 2 — Dashboard
-# ─────────────────────────────────────────────────────────────────────────────
+    with tab_weight:
+        st.subheader("Log weight measurement")
+        with st.form("add_weight"):
+            w_date = st.date_input("Date", value=date.today(), key="w_date")
+            w_time = st.time_input("Time", value=datetime.now().time(), key="w_time")
+            w_grams = st.number_input("Weight (grams)", min_value=500, max_value=20000, value=3200, step=50, key="w_grams")
+            w_notes = st.text_input("Notes (optional)", placeholder="e.g. at pediatrician checkup", key="w_notes")
+            submitted_w = st.form_submit_button("✅ Save weight", use_container_width=True)
+
+        if submitted_w:
+            w_at = datetime.combine(w_date, w_time).isoformat()
+            try:
+                weight = api.add_weight(
+                    baby_id=selected_baby["id"],
+                    measured_at=w_at,
+                    weight_g=int(w_grams),
+                    notes=w_notes or None,
+                )
+                st.success(f"✅ Logged: {weight['weight_g']}g on {w_date}")
+            except requests.HTTPError as e:
+                try:
+                    detail = e.response.json().get("detail", str(e))
+                except Exception:
+                    detail = e.response.text or str(e)
+                st.error(f"Error: {detail}")
+
+        # Weight history
+        st.divider()
+        st.subheader("Weight history")
+        try:
+            weights = api.get_weights(selected_baby["id"])
+        except Exception:
+            weights = []
+
+        if weights:
+            # Display as table
+            for w in sorted(weights, key=lambda x: x["measured_at"], reverse=True)[:10]:
+                dt = datetime.fromisoformat(w["measured_at"])
+                note = f" · _{w['notes']}_" if w.get("notes") else ""
+                st.markdown(f"`{dt.strftime('%d/%m %H:%M')}` **{w['weight_g']}g**{note}")
+        else:
+            st.info("No weight measurements yet.")
 
 elif page == "📊 Dashboard":
     st.header(f"📊 Dashboard — {selected_baby['name']}")
@@ -375,6 +415,88 @@ elif page == "📊 Dashboard":
         recent = sorted(feedings, key=lambda x: x["fed_at"], reverse=True)[:10]
         for f in recent:
             display_feeding_with_actions(f, selected_baby["id"])
+
+    # ── Weight growth chart ──────────────────────────────────────────────────
+    st.divider()
+    st.subheader("⚖️ Growth curve")
+    try:
+        weights = api.get_weights(selected_baby["id"])
+    except Exception:
+        weights = []
+
+    if weights:
+        w_dates = [datetime.fromisoformat(w["measured_at"]).strftime("%d/%m/%Y") for w in weights]
+        w_values = [w["weight_g"] for w in weights]
+        # Birth weight reference line
+        birth_w = selected_baby.get("birth_weight_grams", w_values[0])
+
+        fig_growth = go.Figure()
+        fig_growth.add_scatter(
+            x=w_dates, y=w_values, mode="lines+markers",
+            name="Weight", line=dict(color="#4F86C6", width=3),
+            marker=dict(size=8),
+        )
+        fig_growth.add_hline(
+            y=birth_w, line_dash="dash", line_color="#9CA3AF",
+            annotation_text=f"Birth: {birth_w}g",
+        )
+        fig_growth.update_layout(
+            title="Weight over time",
+            xaxis_title="Date", yaxis_title="Weight (g)",
+            height=350, margin=dict(t=50, b=30),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_growth, use_container_width=True)
+
+        # Weight gain stats
+        if len(weights) >= 2:
+            first_w = weights[0]["weight_g"]
+            last_w = weights[-1]["weight_g"]
+            gain = last_w - first_w
+            st.info(f"📈 Total gain since first measurement: **+{gain}g**  ({first_w}g → {last_w}g)")
+    else:
+        st.info("No weight measurements recorded. Log weight entries in the Quick Entry tab.")
+
+    # ── CSV export ───────────────────────────────────────────────────────────
+    st.divider()
+    st.subheader("📥 Export data")
+    import csv, io
+
+    col_exp1, col_exp2 = st.columns(2)
+    with col_exp1:
+        if feedings:
+            feeding_csv = io.StringIO()
+            writer = csv.DictWriter(
+                feeding_csv,
+                fieldnames=["id", "fed_at", "quantity_ml", "feeding_type", "notes", "created_at"],
+            )
+            writer.writeheader()
+            for f in feedings:
+                writer.writerow({k: f.get(k, "") for k in writer.fieldnames})
+            st.download_button(
+                label="⬇️ Download feedings (CSV)",
+                data=feeding_csv.getvalue(),
+                file_name=f"feedings_{selected_baby['name']}_{start_date}_{end_date}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+    with col_exp2:
+        if weights:
+            weight_csv = io.StringIO()
+            writer = csv.DictWriter(
+                weight_csv,
+                fieldnames=["id", "measured_at", "weight_g", "notes", "created_at"],
+            )
+            writer.writeheader()
+            for w in weights:
+                writer.writerow({k: w.get(k, "") for k in writer.fieldnames})
+            st.download_button(
+                label="⬇️ Download weights (CSV)",
+                data=weight_csv.getvalue(),
+                file_name=f"weights_{selected_baby['name']}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE 3 — AI Analysis
