@@ -16,8 +16,10 @@ class AnalysisReport(BaseModel):
     """Full report record returned from the database."""
     id: int
     baby_id: int
-    period: str
     period_label: str
+    start_datetime: datetime
+    end_datetime: datetime
+    is_partial: bool
     analysis: str
     sources: list[ReportSource] = []
     created_at: datetime
@@ -29,6 +31,8 @@ class AnalysisReportSummary(BaseModel):
     """Lightweight listing model — no full analysis text."""
     id: int
     baby_id: int
-    period: str
     period_label: str
+    start_datetime: datetime
+    end_datetime: datetime
+    is_partial: bool
     created_at: datetime

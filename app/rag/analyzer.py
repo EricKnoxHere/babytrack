@@ -2,7 +2,8 @@
 
 import logging
 import os
-from datetime import date, datetime
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -17,8 +18,37 @@ from .retriever import format_context, retrieve_context
 logger = logging.getLogger(__name__)
 
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
-MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1024"))
+MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1200"))
 
+
+# ─── Analysis context ─────────────────────────────────────────────────────────
+
+@dataclass
+class AnalysisContext:
+    """Temporal metadata passed to the prompt so Claude reasons correctly."""
+    start: datetime
+    end: datetime
+    is_partial: bool           # window is still ongoing (end ≈ now)
+    hours_elapsed: float       # length of the window in hours
+    feedings_expected: int     # age-based estimate for the full window
+    baseline_count: int        # feedings in the previous equivalent window
+    baseline_volume_ml: int    # total ml in the previous equivalent window
+    baseline_label: str        # human-readable label for the baseline window
+
+
+def _expected_feedings_per_hour(age_days: int) -> float:
+    """Returns approximate feedings/hour based on baby age."""
+    if age_days < 30:
+        return 9 / 24      # ~9/day for newborns
+    elif age_days < 60:
+        return 7.5 / 24
+    elif age_days < 120:
+        return 6 / 24
+    else:
+        return 5 / 24
+
+
+# ─── Summarisers ──────────────────────────────────────────────────────────────
 
 def _summarize_feedings(feedings: list[Feeding]) -> str:
     """Builds a structured text summary of feedings for the prompt."""
@@ -34,9 +64,8 @@ def _summarize_feedings(feedings: list[Feeding]) -> str:
         frozenset({"bottle", "breastfeeding"}): "mixed (bottle + breastfeeding)",
     }.get(frozenset(types), ", ".join(types))
 
-    # Chronological detail
     lines = [
-        f"- {f.fed_at.strftime('%H:%M')} : {f.quantity_ml} ml ({f.feeding_type})"
+        f"- {f.fed_at.strftime('%d/%m %H:%M')} : {f.quantity_ml} ml ({f.feeding_type})"
         + (f" — note: {f.notes}" if f.notes else "")
         for f in sorted(feedings, key=lambda x: x.fed_at)
     ]
@@ -65,16 +94,12 @@ def _extract_contextual_events(
     feedings: list[Feeding],
     weights: list[Weight],
 ) -> str:
-    """
-    Collects all non-empty notes from feedings and weights into a
-    chronological event log. Returns empty string if no notes exist.
-    """
-    events: list[tuple[datetime, str, str]] = []  # (timestamp, type, note)
+    """Collects all non-empty notes into a chronological event log."""
+    events: list[tuple[datetime, str, str]] = []
 
     for f in feedings:
         if f.notes and f.notes.strip():
             events.append((f.fed_at, "feeding", f.notes.strip()))
-
     for w in weights:
         if w.notes and w.notes.strip():
             events.append((w.measured_at, "weight", w.notes.strip()))
@@ -83,18 +108,19 @@ def _extract_contextual_events(
         return ""
 
     events.sort(key=lambda x: x[0])
-    lines = [
+    return "\n".join(
         f"- {ts.strftime('%d/%m %H:%M')} [{kind}]: {note}"
         for ts, kind, note in events
-    ]
-    return "\n".join(lines)
+    )
 
+
+# ─── Prompt builder ───────────────────────────────────────────────────────────
 
 def _build_prompt(
     baby: Baby,
     feedings: list[Feeding],
-    period_label: str,
     rag_context: str,
+    ctx: AnalysisContext,
     weights: list[Weight] | None = None,
 ) -> str:
     feeding_summary = _summarize_feedings(feedings)
@@ -109,30 +135,48 @@ def _build_prompt(
     else:
         age_str = f"{age_months} months"
 
-    # Weight section (optional)
-    weight_section = ""
-    if weights:
-        weight_summary = _summarize_weights(weights)
-        weight_section = f"\n## Weight measurements\n{weight_summary}\n"
+    # ── Temporal context block ────────────────────────────────────────────────
+    if ctx.is_partial:
+        pace = len(feedings) / ctx.hours_elapsed if ctx.hours_elapsed > 0 else 0
+        projected = round(pace * 24)
+        partial_note = (
+            f"⏳ PARTIAL: {len(feedings)} feeds in {ctx.hours_elapsed:.0f}h → ~{projected}/day pace. "
+            f"Evaluate rate, not totals."
+        )
+    else:
+        partial_note = "✅ Complete window."
 
-    # Contextual events — all notes from feedings and weights surfaced explicitly
+    baseline_note = (
+        f"{ctx.baseline_count} feeds / {ctx.baseline_volume_ml}ml (previous equivalent period)"
+        if ctx.baseline_count > 0
+        else "No previous data to compare."
+    )
+
+    temporal_section = f"""## Window
+{ctx.start.strftime('%d/%m %H:%M')} → {ctx.end.strftime('%d/%m %H:%M')} ({ctx.hours_elapsed:.0f}h) | {partial_note}
+Baseline: {baseline_note}
+"""
+
+    # ── Contextual events ─────────────────────────────────────────────────────
     contextual_events = _extract_contextual_events(feedings, weights or [])
     context_section = ""
     if contextual_events:
-        context_section = f"""
-## Contextual events (parent notes)
-The parent added the following notes. **These are important context clues** — use them to
-explain abnormal values rather than raising false alarms. For example, lower intake during
-illness is expected; a hot day may increase fluid needs; trying solids affects milk volumes.
-
+        context_section = f"""## Parent notes
 {contextual_events}
+
 """
+
+    # ── Weight section ────────────────────────────────────────────────────────
+    weight_section = ""
+    if weights:
+        weight_section = f"\n## Weight measurements\n{_summarize_weights(weights)}\n"
 
     return f"""You are a pediatric assistant specialising in infant nutrition.
 Analyse the baby's feeding data and provide kind, precise, and actionable recommendations.
 Base your response on the WHO/SFP medical context provided below.
-{context_section}
-## Medical reference context (WHO / SFP)
+
+{temporal_section}
+{context_section}## Medical reference context (WHO / SFP)
 {rag_context}
 
 ## Baby profile
@@ -140,34 +184,23 @@ Base your response on the WHO/SFP medical context provided below.
 - Age: {age_str}
 - Birth weight: {baby.birth_weight_grams} g
 {weight_section}
-## Feeding data — {period_label}
+## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
 {feeding_summary}
 
-## Requested analysis
-Respond in English, in a structured format, with the following sections:
-
-### ✅ Positive points
-Note what is going well (volumes, frequency, regularity).
-
-### ⚠️ Points of attention
-Flag deviations from WHO/SFP recommendations for this age. If contextual notes explain a
-deviation (e.g. illness, heat), mention the context rather than raising an alarm.
-
-### 💡 Recommendations
-Give 2–3 concrete actions tailored to the baby's age and the contextual notes if any.
-
-### 📊 Summary
-A one-sentence summary of the feeding for the analysed period, mentioning any key context.
-
-Be reassuring if the data is normal. Recommend consulting a paediatrician only if a
-significant anomaly remains unexplained by the contextual notes.
+## Analysis (concise format)
+**✅ Positive:** What's going well.
+**⚠️ Concerns:** {"Pace off-track?" if ctx.is_partial else "Deviations from norms?"}
+**💡 Action:** 2–3 concrete steps.
+**📊 Summary:** One sentence.
 """
 
+
+# ─── Public API ───────────────────────────────────────────────────────────────
 
 def analyze_feedings(
     baby: Baby,
     feedings: list[Feeding],
-    period_label: str = "the period",
+    ctx: AnalysisContext,
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
     weights: list[Weight] | None = None,
@@ -177,37 +210,33 @@ def analyze_feedings(
 
     Args:
         baby: Full baby profile.
-        feedings: List of feedings to analyse.
-        period_label: Human-readable period label (e.g. "day of 23/02/2026").
-        index: Pre-loaded vector index (optional, avoids reload).
+        feedings: Feedings within the analysis window.
+        ctx: Temporal context (window, partial flag, baseline).
+        index: Pre-loaded vector index (optional).
         index_dir: Path to the index (if index not provided).
-        weights: Recent weight measurements (optional). Notes on weight entries
-                 are surfaced as contextual events to help Claude interpret values.
+        weights: Recent weight measurements + notes (optional).
 
     Returns:
-        Tuple of (analysis text, list of source documents with scores).
+        Tuple of (analysis text, list of source dicts).
     """
-    # 1. Build the RAG query based on age and feeding type
     age_days = (date.today() - baby.birth_date).days
-    feeding_types = {f.feeding_type for f in feedings}
+    feeding_types = {f.feeding_type for f in feedings} or {"bottle"}
     query = (
         f"recommended bottle volume feeding frequency infant "
         f"{age_days // 30} months "
         f"{'bottle formula' if 'bottle' in feeding_types else 'breastfeeding'}"
     )
 
-    # 2. Retrieve medical context
-    kwargs = {"query": query, "top_k": 4}
+    kwargs: dict = {"query": query, "top_k": 4}
     if index is not None:
         kwargs["index"] = index
     elif index_dir is not None:
         kwargs["index_dir"] = index_dir
 
-    sources = []
+    sources: list[dict] = []
     try:
         nodes = retrieve_context(**kwargs)
         rag_context = format_context(nodes)
-        # Extract source metadata
         for node in nodes:
             sources.append({
                 "source": node.metadata.get("file_name", "unknown"),
@@ -215,12 +244,11 @@ def analyze_feedings(
             })
     except Exception as exc:
         logger.warning("RAG retrieval failed (%s) — analysing without context", exc)
-        rag_context = "Medical context unavailable (missing index or error)."
+        rag_context = "Medical context unavailable."
 
-    # 3. Build and send the prompt to Claude
-    prompt = _build_prompt(baby, feedings, period_label, rag_context, weights=weights)
+    prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights)
 
-    client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY from environment
+    client = anthropic.Anthropic()
     try:
         message = client.messages.create(
             model=CLAUDE_MODEL,
@@ -233,5 +261,5 @@ def analyze_feedings(
         raise
 
     analysis = message.content[0].text
-    logger.info("Analysis generated for %s (%d tokens)", baby.name, message.usage.output_tokens)
+    logger.info("Analysis for %s (%dh window, partial=%s)", baby.name, ctx.hours_elapsed, ctx.is_partial)
     return analysis, sources

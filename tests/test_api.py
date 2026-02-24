@@ -238,27 +238,27 @@ MOCK_ANALYSIS = (MOCK_ANALYSIS_TEXT, MOCK_SOURCES)
 
 async def test_analysis_day(client: AsyncClient):
     with patch("app.api.routes.analysis.analyze_feedings", return_value=MOCK_ANALYSIS):
-        resp = await client.get("/analysis/1?period=day&reference_date=2025-01-15")
+        resp = await client.get("/analysis/1?start=2025-01-15T00:00:00&end=2025-01-15T23:59:59")
     assert resp.status_code == 200
     data = resp.json()
     assert data["baby_id"] == 1
-    assert data["baby_name"] == "Léna"  # name updated via PATCH
-    assert data["period"] == "day"
+    assert data["baby_name"] == "Léna"
     assert data["analysis"] == MOCK_ANALYSIS_TEXT
     assert len(data["sources"]) == 2
 
 
 async def test_analysis_week(client: AsyncClient):
     with patch("app.api.routes.analysis.analyze_feedings", return_value=MOCK_ANALYSIS):
-        resp = await client.get("/analysis/1?period=week&reference_date=2025-01-21")
+        resp = await client.get("/analysis/1?start=2025-01-15T00:00:00&end=2025-01-21T23:59:59")
     assert resp.status_code == 200
-    assert resp.json()["period"] == "week"
-    assert len(resp.json()["sources"]) == 2
+    data = resp.json()
+    assert data["analysis"] == MOCK_ANALYSIS_TEXT
+    assert len(data["sources"]) == 2
 
 
 async def test_analysis_no_feedings(client: AsyncClient):
-    """Period with no feedings → 404."""
-    resp = await client.get("/analysis/1?period=day&reference_date=2024-01-01")
+    """Range with no feedings → 404."""
+    resp = await client.get("/analysis/1?start=2024-01-01T00:00:00&end=2024-01-02T23:59:59")
     assert resp.status_code == 404
 
 

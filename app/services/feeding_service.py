@@ -72,12 +72,27 @@ async def get_feedings_by_day(
 async def get_feedings_by_range(
     db: aiosqlite.Connection, baby_id: int, start: date, end: date
 ) -> list[Feeding]:
-    """Return feedings between start (inclusive) and end (inclusive)."""
+    """Return feedings between start (inclusive) and end (inclusive) calendar dates."""
     rows = await db.execute_fetchall(
         """SELECT * FROM feedings
            WHERE baby_id = ?
              AND date(fed_at) >= ?
              AND date(fed_at) <= ?
+           ORDER BY fed_at""",
+        (baby_id, start.isoformat(), end.isoformat()),
+    )
+    return [_row_to_feeding(r) for r in rows]
+
+
+async def get_feedings_by_datetime_range(
+    db: aiosqlite.Connection, baby_id: int, start: datetime, end: datetime
+) -> list[Feeding]:
+    """Return feedings strictly between two datetime bounds (microsecond precision)."""
+    rows = await db.execute_fetchall(
+        """SELECT * FROM feedings
+           WHERE baby_id = ?
+             AND fed_at >= ?
+             AND fed_at <= ?
            ORDER BY fed_at""",
         (baby_id, start.isoformat(), end.isoformat()),
     )

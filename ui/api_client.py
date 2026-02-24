@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import os
-from datetime import date
+from datetime import date, datetime
 from io import StringIO
 from typing import Any, Optional
 
@@ -138,12 +138,18 @@ def get_weights(
 
 def get_analysis(
     baby_id: int,
-    period: str = "day",
-    reference_date: Optional[date] = None,
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
 ) -> dict:
-    params: dict = {"period": period}
-    if reference_date:
-        params["reference_date"] = reference_date.isoformat()
+    """
+    Request an AI analysis for a datetime window.
+    Defaults to today 00:00 → now (partial day) if no range given.
+    """
+    params: dict = {}
+    if start:
+        params["start"] = start.isoformat()
+    if end:
+        params["end"] = end.isoformat()
     return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
 
 

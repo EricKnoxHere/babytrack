@@ -20,7 +20,7 @@ from app.models.baby import Baby
 from app.models.feeding import Feeding
 from app.rag.indexer import build_index, load_index
 from app.rag.retriever import format_context, retrieve_context
-from app.rag.analyzer import analyze_feedings, _summarize_feedings, _extract_contextual_events
+from app.rag.analyzer import AnalysisContext, analyze_feedings, _summarize_feedings, _extract_contextual_events
 from app.models.weight import Weight
 
 DOCS_DIR = Path("data/docs")
@@ -249,12 +249,22 @@ def _mock_claude_response(text: str = "### ✅ All looks good."):
 
 
 def test_analyze_feedings_returns_string(sample_baby, sample_feedings, index):
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=7,
+        baseline_volume_ml=630,
+        baseline_label="prev day",
+    )
     with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response()
         analysis_text, sources = analyze_feedings(
             baby=sample_baby,
             feedings=sample_feedings,
-            period_label="day of 23/02/2026",
+            ctx=ctx,
             index=index,
         )
     assert isinstance(analysis_text, str) and len(analysis_text) > 0
@@ -263,6 +273,16 @@ def test_analyze_feedings_returns_string(sample_baby, sample_feedings, index):
 
 def test_analyze_feedings_prompt_has_baby_name(sample_baby, sample_feedings, index):
     """The prompt sent to Claude must contain the baby's name."""
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=7,
+        baseline_volume_ml=630,
+        baseline_label="prev day",
+    )
     captured = []
 
     def capture(**kwargs):
@@ -271,27 +291,47 @@ def test_analyze_feedings_prompt_has_baby_name(sample_baby, sample_feedings, ind
 
     with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.side_effect = capture
-        analyze_feedings(baby=sample_baby, feedings=sample_feedings, index=index)
+        analyze_feedings(baby=sample_baby, feedings=sample_feedings, ctx=ctx, index=index)
 
     assert captured and sample_baby.name in captured[0]
 
 
 def test_analyze_feedings_empty_list(sample_baby, index):
     """analyzer must not crash if the feeding list is empty."""
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=0,
+        baseline_volume_ml=0,
+        baseline_label="none",
+    )
     with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response(
             "No feedings recorded."
         )
-        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=[], index=index)
+        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=[], ctx=ctx, index=index)
     assert isinstance(analysis_text, str)
     assert isinstance(sources, list)
 
 
 def test_analyze_feedings_rag_failure_graceful(sample_baby, sample_feedings):
     """If RAG fails, analysis should still proceed (without context)."""
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=7,
+        baseline_volume_ml=630,
+        baseline_label="prev day",
+    )
     with patch("app.rag.analyzer.retrieve_context", side_effect=Exception("RAG KO")), \
          patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response()
-        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=sample_feedings)
+        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=sample_feedings, ctx=ctx)
     assert isinstance(analysis_text, str)
     assert isinstance(sources, list)

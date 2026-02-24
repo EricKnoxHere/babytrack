@@ -45,15 +45,28 @@ CREATE TABLE IF NOT EXISTS weight_entries (
 
 _CREATE_ANALYSIS_REPORTS = """
 CREATE TABLE IF NOT EXISTS analysis_reports (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    baby_id      INTEGER NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    period       TEXT    NOT NULL CHECK(period IN ('day', 'week')),
-    period_label TEXT    NOT NULL,
-    analysis     TEXT    NOT NULL,
-    sources_json TEXT    NOT NULL DEFAULT '[]',
-    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    baby_id        INTEGER NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
+    period_label   TEXT    NOT NULL,
+    start_datetime TEXT    NOT NULL,
+    end_datetime   TEXT    NOT NULL,
+    is_partial     INTEGER NOT NULL DEFAULT 0,
+    analysis       TEXT    NOT NULL,
+    sources_json   TEXT    NOT NULL DEFAULT '[]',
+    created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
 )
 """
+
+
+async def _migrate_analysis_reports(db: aiosqlite.Connection) -> None:
+    """Recreate analysis_reports if it uses the old schema (period + no start/end cols)."""
+    async with db.execute("PRAGMA table_info(analysis_reports)") as cur:
+        cols = {row[1] for row in await cur.fetchall()}
+    if cols and "start_datetime" not in cols:
+        # Old schema detected — migrate (dev data loss accepted)
+        await db.execute("DROP TABLE analysis_reports")
+        await db.execute(_CREATE_ANALYSIS_REPORTS)
+        await db.commit()
 
 
 async def create_tables(db_url: str = DATABASE_URL) -> None:
@@ -64,6 +77,7 @@ async def create_tables(db_url: str = DATABASE_URL) -> None:
         await db.execute(_CREATE_BABIES)
         await db.execute(_CREATE_FEEDINGS)
         await db.execute(_CREATE_WEIGHTS)
+        await _migrate_analysis_reports(db)
         await db.execute(_CREATE_ANALYSIS_REPORTS)
         await db.commit()
 

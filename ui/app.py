@@ -517,37 +517,86 @@ elif page == "🤖 AI Analysis":
     st.header(f"🤖 AI Analysis — {selected_baby['name']}")
     st.caption("Powered by Claude · WHO/SFP medical context via RAG")
 
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        period = st.radio("Period", ["day", "week"], format_func=lambda p: "Daily" if p == "day" else "Weekly", horizontal=True)
-    with col2:
-        ref_date = st.date_input("Reference date", value=date.today())
-    with col3:
-        st.write("")  # spacing
-        analyze_btn = st.button("🔍 Analyse", use_container_width=False, type="primary")
+    # ── Quick-select range buttons ────────────────────────────────────────────
+    now = datetime.now()
+
+    QUICK_RANGES = {
+        "Today":       (datetime(now.year, now.month, now.day, 0, 0, 0), now),
+        "Yesterday":   (datetime(now.year, now.month, now.day, 0, 0, 0) - timedelta(days=1),
+                        datetime(now.year, now.month, now.day, 0, 0, 0)),
+        "Last 3 days": (now - timedelta(days=3), now),
+        "Last 7 days": (now - timedelta(days=7), now),
+        "Last 14 days":(now - timedelta(days=14), now),
+    }
+
+    st.subheader("📅 Select analysis window")
+
+    # Quick-select row
+    qcols = st.columns(len(QUICK_RANGES))
+    selected_range_key = st.session_state.get("analysis_range_key", "Today")
+    for col, label in zip(qcols, QUICK_RANGES):
+        is_active = (selected_range_key == label)
+        if col.button(label, use_container_width=True,
+                      type="primary" if is_active else "secondary",
+                      key=f"qr_{label}"):
+            st.session_state["analysis_range_key"] = label
+            st.session_state.pop("analysis_custom_start", None)
+            st.session_state.pop("analysis_custom_end", None)
+            st.rerun()
+
+    # Custom range expander
+    with st.expander("🗓️ Custom range"):
+        cc1, cc2 = st.columns(2)
+        custom_start_d = cc1.date_input("From", value=date.today() - timedelta(days=1), key="custom_start_d")
+        custom_start_t = cc1.time_input("From time", value=datetime.min.time(), key="custom_start_t")
+        custom_end_d   = cc2.date_input("To",   value=date.today(), key="custom_end_d")
+        custom_end_t   = cc2.time_input("To time",   value=now.time(), key="custom_end_t")
+        if st.button("Apply custom range", use_container_width=True):
+            st.session_state["analysis_custom_start"] = datetime.combine(custom_start_d, custom_start_t)
+            st.session_state["analysis_custom_end"]   = datetime.combine(custom_end_d,   custom_end_t)
+            st.session_state["analysis_range_key"] = "custom"
+            st.rerun()
+
+    # Resolve start/end
+    if st.session_state.get("analysis_range_key") == "custom":
+        analysis_start = st.session_state.get("analysis_custom_start", datetime(now.year, now.month, now.day))
+        analysis_end   = st.session_state.get("analysis_custom_end",   now)
+    else:
+        key = st.session_state.get("analysis_range_key", "Today")
+        analysis_start, analysis_end = QUICK_RANGES.get(key, QUICK_RANGES["Today"])
+
+    # Show resolved range + partial badge
+    is_today_end = (now - analysis_end).total_seconds() < 30 * 60
+    range_str = f"{analysis_start.strftime('%d/%m %H:%M')} → {analysis_end.strftime('%d/%m %H:%M')}"
+    if is_today_end:
+        st.info(f"🕐 **{range_str}** — ongoing window · Claude will evaluate pace, not totals")
+    else:
+        st.success(f"✅ **{range_str}** — complete window")
+
+    analyze_btn = st.button("🔍 Analyse", use_container_width=True, type="primary")
 
     if analyze_btn:
         with st.spinner("Claude is analysing the data..."):
             try:
                 result = api.get_analysis(
                     baby_id=selected_baby["id"],
-                    period=period,
-                    reference_date=ref_date,
+                    start=analysis_start,
+                    end=analysis_end,
                 )
-                st.success(f"✅ Analysis for: **{result['period_label']}**")
+                badge = "🕐 Ongoing" if result.get("is_partial") else "✅ Complete"
+                st.success(f"{badge} · **{result['period_label']}**")
                 st.divider()
                 st.markdown(result["analysis"])
-                
-                # Show RAG sources if available
+
                 if result.get("sources"):
                     st.divider()
-                    st.subheader("📚 Medical sources cited")
-                    for src in result["sources"]:
-                        score = f" (relevance: {src['score']})" if src.get("score") else ""
-                        st.caption(f"🔹 {src['source']}{score}")
+                    st.caption("📚 **Medical sources:** " + " · ".join(
+                        f"{s['source']}" + (f" ({s['score']})" if s.get("score") else "")
+                        for s in result["sources"]
+                    ))
                 else:
-                    st.caption("_No medical context used for this analysis._")
-                    
+                    st.caption("_No RAG context used._")
+
             except requests.HTTPError as e:
                 try:
                     detail = e.response.json().get("detail", str(e))
@@ -576,7 +625,8 @@ elif page == "🤖 AI Analysis":
     else:
         for report_summary in history:
             created = datetime.fromisoformat(report_summary["created_at"])
-            label = f"{'📅' if report_summary['period'] == 'day' else '📆'} {report_summary['period_label']} · {created.strftime('%d/%m/%Y %H:%M')}"
+            partial_badge = "🕐" if report_summary.get("is_partial") else "✅"
+            label = f"{partial_badge} {report_summary['period_label']} · saved {created.strftime('%d/%m %H:%M')}"
 
             col_r, col_del = st.columns([10, 1])
             with col_r:
