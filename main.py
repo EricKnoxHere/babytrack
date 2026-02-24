@@ -53,7 +53,7 @@ app = FastAPI(
         "Infant feeding tracker API with AI analysis (Claude + WHO/SFP RAG). "
         "Portfolio project — Solutions Architect Anthropic."
     ),
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 

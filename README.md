@@ -21,13 +21,14 @@ The real point isn't the app. It's what building it required me to think about:
 
 ## What it does
 
-| Layer | Function |
-|-------|----------|
-| **Streamlit UI** | Log feedings, visualise 7–30 day trends, trigger AI analysis |
-| **FastAPI** | REST API with Pydantic validation, async SQLite, OpenAPI docs |
-| **RAG pipeline** | LlamaIndex indexes WHO/SFP medical guides; top-k chunks retrieved per query |
-| **Claude** | Structured analysis grounded in retrieved context; consistent markdown output |
-| **Eval framework** | LLM-as-judge scores outputs on 5 criteria; RAG vs no-RAG comparison |
+| Feature | What you can do |
+|---------|-----------------|
+| **Feeding tracking** | Log bottle / breastfeeding with timestamps, volumes, notes. Edit / delete at any time. |
+| **Weight tracking** | Record growth checkpoints; foundation for growth curve analysis. |
+| **Trends & analytics** | Visualise 7–30 day feeding patterns. Daily totals, type breakdown, recent history. |
+| **AI analysis** | Claude powered. Grounded in WHO/SFP guidelines via RAG. Age-aware recommendations. |
+| **REST API** | Full CRUD on babies, feedings, weights. POST/PATCH/DELETE support. OpenAPI docs. |
+| **Eval framework** | LLM-as-judge rates Claude output quality. RAG vs baseline comparison. |
 
 ---
 
@@ -121,25 +122,35 @@ This is a portfolio demo, but the architecture decisions reflect real deployment
 
 ---
 
+## Features added in v0.4
+
+- ✅ Full CRUD for feedings (create, read, update, delete)
+- ✅ Weight tracking — growth monitoring data model
+- ✅ Streamlit UI overhaul — custom theme, better layout, edit/delete buttons
+- ✅ Eval framework — LLM-as-judge with RAG vs baseline scoring
+- ✅ README rewrite — SA/business-focused narrative
+
+---
+
 ## Running locally
 
 ```bash
-# 1. Install dependencies
+# 1. Install & activate
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Set your Anthropic API key
+# 2. API key
 cp .env.example .env
 # Edit .env → add ANTHROPIC_API_KEY
 
-# 3. Start the API
+# 3. Start services
 uvicorn main:app --reload
-
-# 4. Start the UI (new terminal)
+# (in another terminal)
 streamlit run ui/app.py
 ```
 
-Open: **http://localhost:8501**
+Open UI: **http://localhost:8501**  
+API docs: **http://localhost:8000/docs**
 
 ---
 
@@ -147,14 +158,15 @@ Open: **http://localhost:8501**
 
 ```bash
 pytest tests/ -v
-# 59 tests · 0 failures · zero network calls
+# 74 tests · 0 failures · zero network calls
 ```
 
 | Suite | Tests | What's covered |
 |-------|-------|---------------|
-| Data layer | 21 | Models, async CRUD, cascade deletes |
+| Data layer — Feedings | 21 | CRUD, filtering by day/range, cascade deletes |
+| Data layer — Weights | 9 | Add, get, update, delete, range queries |
 | RAG pipeline | 18 | Indexer, retriever, analyzer (MockEmbedding + mock Anthropic) |
-| FastAPI | 20 | All endpoints, validation, error cases |
+| FastAPI | 20+ | Feedings, weights, babies, analysis endpoints; PATCH/DELETE |
 
 ---
 
