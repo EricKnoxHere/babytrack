@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.dependencies import DbDep
-from app.models.feeding import Feeding, FeedingCreate
+from app.models.feeding import Feeding, FeedingCreate, FeedingUpdate
 from app.services import baby_service, feeding_service
 
 router = APIRouter(prefix="/feedings", tags=["feedings"])
@@ -53,6 +53,15 @@ async def get_feedings(
         return await feeding_service.get_feedings_by_range(db, baby_id, start, end)
 
     return await feeding_service.get_feedings_by_baby(db, baby_id)
+
+
+@router.patch("/{feeding_id}", response_model=Feeding)
+async def update_feeding(feeding_id: int, payload: FeedingUpdate, db: DbDep) -> Feeding:
+    """Update a feeding record (all fields optional)."""
+    feeding = await feeding_service.update_feeding(db, feeding_id, payload)
+    if not feeding:
+        raise HTTPException(status_code=404, detail=f"Feeding {feeding_id} not found")
+    return feeding
 
 
 @router.delete("/{feeding_id}", status_code=status.HTTP_204_NO_CONTENT)

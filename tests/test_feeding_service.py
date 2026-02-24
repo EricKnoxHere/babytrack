@@ -14,6 +14,7 @@ from app.services.feeding_service import (
     get_feedings_by_baby,
     get_feedings_by_day,
     get_feedings_by_range,
+    update_feeding,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -103,6 +104,32 @@ async def test_get_feedings_by_range_inclusive(db):
 
     feedings = await get_feedings_by_range(db, baby.id, date(2024, 2, 1), date(2024, 2, 7))
     assert len(feedings) == 2
+
+
+async def test_update_feeding(db):
+    baby = await _make_baby(db)
+    feeding = await add_feeding(db, _feeding(baby.id, date(2024, 2, 1), 8, ml=100))
+    updated = await update_feeding(db, feeding.id, FeedingUpdate(quantity_ml=150))
+    assert updated is not None
+    assert updated.quantity_ml == 150
+    assert updated.feeding_type == "bottle"  # unchanged
+
+
+async def test_update_feeding_multiple_fields(db):
+    baby = await _make_baby(db)
+    feeding = await add_feeding(db, _feeding(baby.id, date(2024, 2, 1), 8, ml=100))
+    updated = await update_feeding(
+        db,
+        feeding.id,
+        FeedingUpdate(quantity_ml=200, notes="updated test"),
+    )
+    assert updated.quantity_ml == 200
+    assert updated.notes == "updated test"
+
+
+async def test_update_feeding_not_found(db):
+    result = await update_feeding(db, 9999, FeedingUpdate(quantity_ml=100))
+    assert result is None
 
 
 async def test_delete_feeding(db):

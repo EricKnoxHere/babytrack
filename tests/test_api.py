@@ -188,6 +188,40 @@ async def test_get_feedings_baby_not_found(client: AsyncClient):
     assert resp.status_code == 404
 
 
+async def test_update_feeding(client: AsyncClient):
+    # Get a feeding first
+    resp = await client.get("/feedings/1")
+    feedings = resp.json()
+    if feedings:
+        feeding_id = feedings[0]["id"]
+        resp = await client.patch(
+            f"/feedings/{feeding_id}",
+            json={"quantity_ml": 200},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["quantity_ml"] == 200
+
+
+async def test_update_feeding_not_found(client: AsyncClient):
+    resp = await client.patch("/feedings/9999", json={"quantity_ml": 100})
+    assert resp.status_code == 404
+
+
+async def test_delete_feeding(client: AsyncClient):
+    # Get a feeding first
+    resp = await client.get("/feedings/1")
+    feedings = resp.json()
+    if feedings:
+        feeding_id = feedings[0]["id"]
+        resp = await client.delete(f"/feedings/{feeding_id}")
+        assert resp.status_code == 204
+        # Verify it's gone
+        resp = await client.get(f"/feedings/1")
+        remaining = resp.json()
+        assert all(f["id"] != feeding_id for f in remaining)
+
+
 # ---------------------------------------------------------------------------
 # /analysis
 # ---------------------------------------------------------------------------

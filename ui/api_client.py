@@ -77,6 +77,28 @@ def get_feedings(
     return _get(f"/feedings/{baby_id}", params=params)
 
 
+def update_feeding(feeding_id: int, updates: dict) -> dict:
+    """Update a feeding record (only non-None fields)."""
+    return _request("PATCH", f"/feedings/{feeding_id}", updates)
+
+
+def delete_feeding(feeding_id: int) -> None:
+    """Delete a feeding record."""
+    resp = requests.delete(f"{API_BASE}/feedings/{feeding_id}", timeout=TIMEOUT)
+    resp.raise_for_status()
+
+
+def _request(method: str, path: str, payload: dict) -> dict:
+    """Make a custom HTTP request."""
+    url = f"{API_BASE}{path}"
+    if method == "PATCH":
+        resp = requests.patch(url, json=payload, timeout=TIMEOUT)
+    else:
+        raise ValueError(f"Unsupported method: {method}")
+    resp.raise_for_status()
+    return resp.json()
+
+
 # ── AI Analysis ────────────────────────────────────────────────────────────
 
 

@@ -84,6 +84,44 @@ async def get_feedings_by_range(
     return [_row_to_feeding(r) for r in rows]
 
 
+async def update_feeding(
+    db: aiosqlite.Connection, feeding_id: int, update: FeedingUpdate
+) -> Feeding | None:
+    """Update a feeding record. Only non-None fields are updated."""
+    # Check if feeding exists
+    feeding = await get_feeding(db, feeding_id)
+    if not feeding:
+        return None
+
+    # Build the update query dynamically
+    fields = []
+    values = []
+    if update.fed_at is not None:
+        fields.append("fed_at = ?")
+        values.append(update.fed_at.isoformat())
+    if update.quantity_ml is not None:
+        fields.append("quantity_ml = ?")
+        values.append(update.quantity_ml)
+    if update.feeding_type is not None:
+        fields.append("feeding_type = ?")
+        values.append(update.feeding_type)
+    if update.notes is not None:
+        fields.append("notes = ?")
+        values.append(update.notes)
+
+    if not fields:
+        # No updates requested, return the current record
+        return feeding
+
+    values.append(feeding_id)
+    query = f"UPDATE feedings SET {', '.join(fields)} WHERE id = ?"
+    await db.execute(query, values)
+    await db.commit()
+
+    # Fetch and return the updated record
+    return await get_feeding(db, feeding_id)
+
+
 async def delete_feeding(db: aiosqlite.Connection, feeding_id: int) -> bool:
     """Delete a feeding. Returns True if deleted."""
     cursor = await db.execute("DELETE FROM feedings WHERE id = ?", (feeding_id,))
