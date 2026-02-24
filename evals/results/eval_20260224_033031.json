@@ -1,0 +1,134 @@
+{
+  "model": "claude-haiku-4-5-20251001",
+  "run_at": "20260224_033031",
+  "summary": {
+    "avg_rag": 15.0,
+    "avg_baseline": 14.666666666666666,
+    "avg_delta": 0.3333333333333339
+  },
+  "scenarios": [
+    {
+      "scenario": "newborn_healthy",
+      "description": "7-day-old, volumes and frequency within WHO norms",
+      "rag": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 3,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "Excellent analysis that correctly identifies Louise as borderline-adequate rather than concerning, appropriately grounds recommendations in WHO guidelines, provides concrete next steps, and maintains reassuring yet appropriately cautious tone."
+        },
+        "total": 15,
+        "analysis": "# Feeding Analysis: Louise (8 days old)\n\n---\n\n## \u2705 Positive points\n\n- **Good feeding frequency**: 6 feeds in 24 hours is appropriate for an 8-day-old infant; this aligns well with WHO recommendations (8\u201312 feeds in the first weeks).\n- **Progressive bottle volumes**: The pattern shows a gentle, natural increase from 70 ml to 95 ml across the day, reflecting Louise's growing capacity\u2014this is encouraging and suggests responsive feeding.\n- **Regular spacing**: Feeds are spaced approximately 3 hours apart, which is ideal for this age and supports both infant satiety and maternal/caregiver rest.\n- **Appropriate volume range**: Each individual bottle (70\u201395 ml) falls within the WHO recommendation of 60\u201390 ml for newborns 0\u20131 month.\n\n---\n\n## \u26a0\ufe0f Points of attention\n\n- **Total daily volume is slightly low**: Louise consumed **495 ml** on 23/02/2026.\n  - **Expected range for 8 days**: approximately **500\u2013700 ml/day** (based on 150 ml/kg/day rule; Louise weighs ~3.2 kg).\n  - At 495 ml, Louise is at the lower end of the acceptable range\u2014borderline adequate but not concerning at this precise moment.\n\n- **Only 6 feeds in 24 hours**: While acceptable, Louise is at the minimum end of the 8\u201312 recommended feeds for the first weeks.\n  - If Louise is settling well and appears satisfied, this is fine; however, there is room to increase frequency slightly if weight gain needs monitoring.\n\n- **Critical question\u2014recent weight check**: At 8 days old, Louise should have:\n  - Regained birth weight (or be very close) by now, or\n  - Show a weight loss of no more than 5\u20137% of birth weight (physiological loss peaks around day 3\u20135).\n  - **This is essential information** to assess whether current intake is truly adequate.\n\n---\n\n## \ud83d\udca1 Recommendations\n\n### 1. **Increase total daily volume gradually to 550\u2013600 ml**\n   - Add one additional bottle (e.g., a 7th feed around 23:30\u201300:00) of 80\u2013100 ml, or increase existing bottles by 10\u201315 ml each.\n   - This ensures Louise is safely in the mid-range of expected intake and supports optimal weight gain trajectory (200\u2013300 g/week at this age).\n\n### 2. **Monitor wet nappies and stools as a confidence check**\n   - Aim for **5\u20138 wet nappies per 24 hours** (by day 5\u20137 onwards).\n   - Louise should have **at least 3\u20134 stools per day** (may decrease after week 1\u20132 in bottle-fed infants).\n   - If these markers are present, the 495 ml may be sufficient; if not, increase feeds.\n\n### 3. **Weigh Louise at your next health visit (around day 10\u201314)**\n   - Confirm that birth weight has been regained or that weight loss is < 7%.\n   - If weight gain is on track, current feeding can be maintained; if slower than expected, increase volume by 10\u201315 ml per bottle.\n\n---\n\n## \ud83d\udcca Summary\n\n**Louise's feeding on 23/02/2026 is largely appropriate for her age, with good frequency and progressive bottle sizes, though total daily intake (495 ml) sits at the lower acceptable threshold and should be monitored via weight checks and nappy output over the coming days.**\n\n---\n\n### \ud83c\udfe5 When to seek paediatrician advice\nContact your health visitor or paediatrician if:\n- Louise has fewer than 5 wet nappies per day (after day 5)\n- Weight loss exceeds 10% of birth weight\n- Louise appears lethargic, unresponsive, or difficult to rouse for feeds\n- No weight gain by day 14\n\n**Otherwise, continue with confidence and reassess at the next scheduled check-in.** \ud83d\udc99"
+      },
+      "baseline": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 2,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "Strong analysis with appropriate age-specific guidance, concrete recommendations, and correct safety assessment, though WHO/SFP citation could be more explicit."
+        },
+        "total": 14,
+        "analysis": "# Feeding Analysis for Louise (8 days old)\n\n---\n\n### \u2705 Positive points\n\n- **Good feeding frequency**: 6 feeds in 24 hours is appropriate for an 8-day-old infant\n- **Progressive volume increase**: Volumes are gradually increasing (70\u201395 ml), which reflects natural appetite development\n- **Regular intervals**: Feeds are spaced approximately 3 hours apart, showing good consistency\n- **Appropriate total intake**: 495 ml over 24 hours aligns well with expected needs for a baby of Louise's birth weight at this age (approximately 150\u2013200 ml/kg/day)\n\n---\n\n### \u26a0\ufe0f Points of attention\n\n- **Moderate volumes for day 8**: While the progression is positive, volumes remain modest. By day 8, many infants consume 80\u2013150 ml per feed, so Louise may still be establishing full oral intake\n- **Feeding pattern to monitor**: Continue to watch for signs of adequate intake (wet nappies, stool output, weight gain trajectory)\n\n---\n\n### \ud83d\udca1 Recommendations\n\n1. **Monitor nappy output and weight**: Confirm Louise is having 6+ wet nappies and stools daily, and that weight loss remains within acceptable limits (typically <10% of birth weight by day 8). Weigh Louise regularly to ensure recovery.\n\n2. **Follow baby's hunger cues**: If Louise shows signs of increased hunger (rooting, hand-to-mouth), offer feeds more frequently or in slightly larger volumes\u2014growth needs can vary individually at this age.\n\n3. **Ensure proper bottle-feeding technique**: Check that bottle teats allow appropriate flow, that feeds are unhurried, and that burping occurs to prevent discomfort.\n\n---\n\n### \ud83d\udcca Summary\n\nLouise's feeding pattern on 23/02/2026 shows healthy progression with appropriate frequency and volumes for day 8, with gradually increasing intake that supports normal growth and development.\n\n---\n\n**Overall**: This is reassuring data for a newborn just over one week old. Continue current feeding with close attention to weight gain and nappy output. No urgent concerns detected."
+      },
+      "rag_improvement": 1
+    },
+    {
+      "scenario": "newborn_low_intake",
+      "description": "7-day-old, volumes too low (40 ml/feed), too few feeds",
+      "rag": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 3,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "Excellent analysis that correctly identifies severe feeding inadequacy at 8 days, grounds recommendations in WHO/standard pediatric norms, provides concrete actionable steps, appropriately flags critical safety concerns, and maintains reassuring yet appropriately urgent tone."
+        },
+        "total": 15,
+        "analysis": "# Feeding Analysis for Louise \u2014 8 days old\n\n---\n\n## \u2705 Positive points\n\n- **Regular feeding intervals**: Feeds are spaced 6 hours apart, which shows a structured approach.\n- **Bottle hygiene implied**: Bottle-feeding method is appropriate for this age group.\n- **Responsive feeding attempt**: The caregiver is offering feeds at planned times.\n\n---\n\n## \u26a0\ufe0f Points of attention\n\n**\ud83d\udd34 Critical concern \u2014 Severely inadequate total intake:**\n\n| Parameter | Observed | Recommended for 8 days | Status |\n|-----------|----------|------------------------|--------|\n| **Daily feeds** | 3 | 8\u201312 | \u274c Too few |\n| **Volume per feed** | 40 ml | 60\u201390 ml | \u274c Too low |\n| **Total daily volume** | 120 ml | 480\u2013720 ml | \u274c **Only 17\u201325% of recommended** |\n| **Feeding interval** | 6 hours | 2\u20133 hours | \u274c Too long |\n\n**Specific risks:**\n- At 8 days, Louise should be fed **8\u201312 times per 24 hours**, not 3 times.\n- With only 120 ml daily, Louise is receiving approximately **600 ml less than the minimum requirement**.\n- Long intervals (6 hours) at this critical age increase risk of:\n  - Dehydration\n  - Inadequate weight gain/failure to regain birth weight\n  - Hypoglycaemia\n  - Jaundice complications\n\n---\n\n## \ud83d\udca1 Recommendations\n\n### **1. Increase feeding frequency immediately**\n   - Target: **8\u201310 feeds per 24 hours** (every 2\u20133 hours, including night feeds)\n   - Example schedule: 06:00, 08:30, 11:00, 13:30, 16:00, 18:30, 21:00, 23:30\n   - Do not skip night feeds at this age\u2014they are essential for adequate nutrition.\n\n### **2. Gradually increase volume per feed**\n   - Current: 40 ml \u2192 **Target: 60\u201390 ml per bottle** over the next 2\u20133 days\n   - Allow Louise to drink until satisfied (respect satiety cues; do not force).\n   - Offer both breasts or bottles more frequently if intake remains low.\n\n### **3. Monitor hydration and weight closely**\n   - **Wet nappies**: Ensure at least **6 wet nappies per 24 hours** (after day 5).\n   - **Weight check**: Louise should regain birth weight by **day 10\u201314**. Schedule a weigh-in within **24\u201348 hours** to confirm adequate recovery from physiological weight loss.\n   - **If weight loss > 10% of birth weight or no wet nappies**: Contact your paediatrician urgently.\n\n---\n\n## \ud83d\udcca Summary\n\n**Louise's current intake (120 ml/day in 3 feeds) is significantly below the recommended 480\u2013720 ml for her age; immediate increase in feeding frequency (to 8\u201312 times daily) and volume (to 60\u201390 ml per feed) is essential to support healthy weight gain and prevent complications.**\n\n---\n\n### \ud83d\udd14 Next steps\n- **Consult your paediatrician or midwife within 24 hours** to confirm that:\n  - Louise has regained at least 90% of birth weight (i.e., not lost more than 10%)\n  - She is producing 6+ wet nappies daily\n  - Latch/bottle technique is effective (if any breastfeeding is planned)\n\n- **Reassess feeding in 48 hours** with the new schedule to ensure Louise is gaining approximately 150\u2013200 g/week.\n\nYou are doing well by monitoring feeds. A small adjustment now will set Louise up for healthy growth. \ud83d\udc99"
+      },
+      "baseline": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 3,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "Excellent analysis that correctly identifies critical underfeeding at 7-8 days old, aligns with WHO/evidence-based norms, provides concrete actionable steps, appropriately flags a serious safety concern, and maintains appropriate urgency while being supportive."
+        },
+        "total": 15,
+        "analysis": "# Feeding Analysis for Louise (8 days old)\n\n---\n\n## \u2705 Positive points\n\n- **Regular feeding schedule**: Louise is being fed at consistent 6-hour intervals, which shows good organisational structure.\n- **Bottle feeding established**: A clear feeding method is in place, which allows for volume monitoring and shared feeding responsibilities.\n\n---\n\n## \u26a0\ufe0f Points of attention\n\n- **Total volume is significantly low**: At 120 ml per day, Louise is receiving far below the recommended intake for an 8-day-old infant.\n  - **Expected intake at 8 days**: approximately 120\u2013180 ml/kg/day, which for a 3200g baby would be **384\u2013576 ml/day** (or roughly 60\u201390 ml per feed, 8\u201312 times daily).\n  - Louise received only **40 ml per feed**, which is very low for this age.\n\n- **Feeding frequency is too infrequent**: At 3 feeds per day, Louise is being fed far less often than recommended.\n  - Newborns at 8 days typically require **8\u201312 feeds per 24 hours** (roughly every 2\u20133 hours, including nights).\n\n- **Potential weight loss risk**: This intake level raises concern for inadequate nutrition and possible dehydration, both critical at this early neonatal stage.\n\n---\n\n## \ud83d\udca1 Recommendations\n\n1. **Increase feeding frequency immediately**: Aim for **8\u201312 feeds per 24 hours** (approximately every 2\u20133 hours), including night feeds. This is essential for Louise's growth and milk/formula supply stimulation.\n\n2. **Increase volume per feed gradually**: Work toward **60\u201390 ml per feed** over the next few days, adjusting based on Louise's hunger cues and weight checks.\n\n3. **Monitor weight and consult your paediatrician**: Louise should have a weight check within 24\u201348 hours to ensure she is not losing excessive weight. Given the low current intake, **professional guidance is important** to rule out feeding difficulties or underlying health concerns.\n\n---\n\n## \ud83d\udcca Summary\n\nLouise's feeding on 23/02/2026 (120 ml, 3 feeds) is **significantly below recommended levels for an 8-day-old infant** and requires prompt increase in both frequency and volume to support healthy growth and development. **Please contact your paediatrician for guidance.**"
+      },
+      "rag_improvement": 0
+    },
+    {
+      "scenario": "2month_mixed_feeding",
+      "description": "2-month-old, mixed bottle + breastfeeding, healthy volumes",
+      "rag": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 3,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "Excellent analysis that correctly applies WHO/SFP guidelines to Tom's age, flags the legitimate concern about the 9-hour night gap while appropriately reassuring about the overall feeding plan, and provides concrete, implementable recommendations with clear safety thresholds."
+        },
+        "total": 15,
+        "analysis": "# Feeding Analysis for Tom \u2014 2 months old\n**Date: 23/02/2026**\n\n---\n\n## \u2705 Positive points\n\n- **Appropriate feeding frequency**: 6 feeds in 24 hours is well-aligned with WHO/SFP recommendations for a 2-month-old (typically 6\u20138 bottles/day).\n- **Regular rhythm**: The 3-hour interval between feeds is consistent and manageable, supporting predictability for Tom and caregivers.\n- **Mixed feeding balance**: Alternating bottle and breastfeeding (3 each) is a sensible approach if breastfeeding is being maintained.\n- **Adequate daily volume**: 720 ml total is within the recommended 600\u2013750 ml range for a 2-month-old (approximately 180\u2013210 ml/kg for a 3.5\u20134 kg infant).\n- **Appropriate bottle volumes**: Individual bottle feeds (110 ml) are within the 90\u2013120 ml range recommended for this age.\n\n---\n\n## \u26a0\ufe0f Points of attention\n\n- **Bottle volume on the lower end**: At 110 ml per bottle feed, Tom is at the lower boundary of recommendations. While this is not concerning if he is satisfied and gaining weight normally, monitor whether he shows hunger cues within 3 hours.\n- **No night feed documented**: The last feed at 21:30 is followed by a 9-hour gap until the morning feed at 06:30. For a 2-month-old, this is at the upper limit of acceptable spacing. Ensure Tom is not waking hungry during the night; if he is, offer a night feed (formula or breast).\n- **Breastfeeding volumes unknown**: The data notes \"130 ml (breastfeeding)\" but actual breast milk intake cannot be directly measured. Ensure Tom is producing 5\u20138 wet nappies and 2\u20135 stools daily as indirect indicators of adequate breastfeeding.\n\n---\n\n## \ud83d\udca1 Recommendations\n\n1. **Monitor weight gain and satiety signals**: Confirm Tom is gaining 100\u2013200 g/week (appropriate for 1\u20133 months). Watch for early hunger cues (hand-to-mouth, rooting) within the 3-hour intervals. If he consistently feeds for < 10 minutes or shows hunger < 2 hours after a feed, consider offering slightly larger volumes (120\u2013130 ml per bottle).\n\n2. **Assess night feeding**: If Tom sleeps through the 21:30 \u2192 06:30 gap without waking, this is excellent. **However**, if he is waking hungry or unsettled, introduce a night feed (formula or expressed breast milk) around 23:00\u201300:00 to bridge this 9-hour interval. At 2 months, some babies still need night nutrition.\n\n3. **Continue breastfeeding support**: Maintain the mixed feeding approach if it is working. If breastfeeding is established and Tom appears satisfied, no changes are needed. If there are concerns (pain, poor latch, unclear milk transfer), consult a lactation specialist.\n\n---\n\n## \ud83d\udcca Summary\n\n**Tom's feeding on 23/02/2026 is well-structured and meets WHO/SFP guidelines for a 2-month-old**: regular 3-hour intervals, appropriate volumes (720 ml total), and balanced mixed feeding\u2014provided he is gaining weight normally and showing no signs of hunger during the long night interval.\n\n---\n\n### \ud83d\udd0d When to consult a paediatrician\n\nContact your doctor if:\n- Tom loses weight or gains < 100 g/week\n- He has fewer than 5 wet nappies per day\n- He shows persistent hunger cues within 1\u20132 hours of feeding\n- He is unsettled or cries inconsolably despite feeding\n\n**Otherwise, continue monitoring growth and keep this feeding log updated. You're doing well! \ud83d\udc76**"
+      },
+      "baseline": {
+        "structure": {
+          "\u2705": true,
+          "\u26a0\ufe0f": true,
+          "\ud83d\udca1": true,
+          "\ud83d\udcca": true
+        },
+        "scores": {
+          "age_appropriate": 3,
+          "rag_grounded": 3,
+          "actionable": 3,
+          "safety_flag": 3,
+          "tone": 3,
+          "overall_comment": "The analysis appropriately contextualizes Tom's feeding within 2-month norms, grounds recommendations in evidence-based guidelines, provides concrete monitoring steps, and adopts a reassuring yet vigilant tone that matches the benign feeding pattern presented."
+        },
+        "total": 15,
+        "analysis": "# Feeding Analysis for Tom (2 months)\n\n## \u2705 Positive points\n\n- **Excellent feeding frequency**: 6 feedings in 24 hours is appropriate for a 2-month-old and shows good responsiveness to hunger cues.\n- **Consistent rhythm**: The 3-hour intervals between feeds are regular and predictable, which supports digestive stability and maternal routine.\n- **Balanced mixed feeding approach**: Alternating bottle and breastfeeding allows flexibility while maintaining breastfeeding practice.\n- **Appropriate total volume**: 720 ml over 24 hours aligns well with expected intake for a 2-month-old (approximately 150\u2013180 ml/kg/day; at ~6 kg estimated weight, 900\u20131080 ml is typical, and 720 ml remains within acceptable range for this age).\n\n## \u26a0\ufe0f Points of attention\n\n- **Slightly lower total volume**: At 720 ml/day, intake is at the lower end of the recommended range for 2 months. While not concerning if Tom is gaining weight and appears satisfied, monitoring growth trajectory is important.\n- **Asymmetrical bottle vs. breastfeeding volumes**: Bottle feeds (110 ml) are noticeably smaller than breastfeeding sessions (130 ml). This may reflect natural variation, but ensure the bottle volume isn't artificially limited if Tom would take more.\n\n## \ud83d\udca1 Recommendations\n\n1. **Monitor growth and satisfaction**: Track Tom's weekly weight gain (target: 150\u2013200 g/week at 2 months) and watch for satiety cues. If growth is steady and he appears content between feeds, current intake is adequate.\n\n2. **Assess breastfeeding efficiency**: At each breastfeed, observe for consistent suckling, audible swallowing, and breast softening. This confirms adequate milk transfer and may justify the higher \"recorded\" volume at these sessions.\n\n3. **Ensure bottle volume matches demand**: If Tom is finishing bottle feeds and showing hunger cues, consider offering 120\u2013150 ml per bottle to better match his apparent appetite.\n\n## \ud83d\udcca Summary\n\nTom's feeding pattern on 23/02/2026 shows good frequency, consistency, and regular mixed feeding with a total intake of 720 ml\u2014appropriate for his age, provided growth and satisfaction remain normal.\n\n---\n\n*If Tom continues to gain weight appropriately and shows contentment, no medical consultation is needed. However, if weight gain slows or he appears persistently unsatisfied, please consult your paediatrician.*"
+      },
+      "rag_improvement": 0
+    }
+  ]
+}

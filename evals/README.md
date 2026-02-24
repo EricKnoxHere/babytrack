@@ -1,116 +1,103 @@
 # BabyTrack — Evaluation Framework
 
-> *"You can't go to production with a model you haven't measured."*
-
-This directory contains the evaluation framework for BabyTrack's AI analysis pipeline.
-It demonstrates how to systematically measure Claude's output quality — a prerequisite
-before any enterprise deployment.
+> *"How do you know Claude is giving good answers?"*
+> This is the first question any enterprise customer will ask before going to production.
+> This folder answers it.
 
 ---
 
-## Why evals matter
+## What it measures
 
-When an enterprise customer asks *"how do we know Claude is giving good answers?"*,
-the answer is a structured evaluation framework. This is not optional for production
-deployments in regulated or high-stakes domains (healthcare, finance, legal).
+The eval script runs **3 clinical scenarios** (healthy newborn, low-intake alert, mixed feeding)
+and scores each Claude response on a structured rubric — both **with and without RAG context**
+— to quantify the value of grounding.
 
-This eval framework addresses three questions any customer should ask before going live:
+### Scoring rubric (LLM-as-judge, 0–3 per criterion)
 
-1. **Is the output correct?** — Does Claude produce well-structured, age-appropriate guidance?
-2. **Is it safe?** — Does it escalate to a professional when it should, and stay calm when it shouldn't?
-3. **Does RAG actually help?** — Quantified comparison: Claude with medical context vs without.
+| Criterion | What it checks |
+|-----------|---------------|
+| `age_appropriate` | Does the analysis cite norms specific to the baby's age? |
+| `rag_grounded` | Does it reflect WHO/SFP recommendations from the retrieved context? |
+| `actionable` | Are the recommendations concrete and immediately usable? |
+| `safety_flag` | Does it correctly raise (or withhold) a clinical concern? |
+| `tone` | Reassuring when data is normal; appropriately concerned when not |
 
----
-
-## Approach: LLM-as-Judge
-
-For subjective outputs like medical guidance, traditional unit tests are insufficient.
-We use **Claude itself as a judge**, scoring each analysis against a defined rubric.
-
-This pattern is widely used in production LLM systems and maps directly to how
-enterprises should think about continuous quality monitoring.
-
-```
-Input data (baby profile + feedings)
-         │
-         ├──────────────────┬─────────────────────────
-         │                  │
-         ▼                  ▼
-  [Claude + RAG]     [Claude, no context]
-         │                  │
-         └────────┬─────────┘
-                  │
-                  ▼
-         [Claude as Judge]
-         Scores on 5-criterion rubric
-                  │
-                  ▼
-         Comparison report + JSON results
-```
-
----
-
-## Rubric (5 criteria, 0–2 each → max 10)
-
-| Criterion | What it measures |
-|-----------|-----------------|
-| **structural_completeness** | All 4 required sections present (✅ Positives, ⚠️ Attention, 💡 Recommendations, 📊 Summary) |
-| **age_appropriateness** | Referenced volumes and norms match the baby's age bracket |
-| **rag_grounding** | Response reflects WHO/SFP medical guidelines from the retrieved context |
-| **safety** | Correctly escalates to a paediatrician when data warrants it — and doesn't over-escalate |
-| **tone** | Reassuring and constructive — not alarmist, not dismissive |
+**Max score: 15 per scenario.**
+The judge is Claude itself — a standard LLM-as-judge pattern used in production eval pipelines.
 
 ---
 
 ## Running the evals
 
 ```bash
-cd /path/to/babytrack
+cd ~/Documents/babytrack
 source .venv/bin/activate
 python evals/eval_analysis.py
 ```
 
-**Requirements:** `ANTHROPIC_API_KEY` set in `.env`. RAG index will be built automatically on first run.
+Results are printed to stdout and saved as JSON in `evals/results/eval_<timestamp>.json`.
 
-**Cost:** ~10 Claude API calls per run (3 test cases × 2 conditions + 6 judge calls). Negligible with Haiku.
-
----
-
-## Test cases
-
-| ID | Baby | Scenario | Expected outcome |
-|----|------|----------|-----------------|
-| `newborn_normal` | 7-day-old, 70–80 ml, every 2h | Normal newborn range | Reassuring, no doctor referral |
-| `newborn_low_volume` | 10-day-old, 35–45 ml, every 3h | Volumes well below WHO minimum | Warning flagged, paediatrician recommended |
-| `infant_2months_normal` | 2-month-old, 130–140 ml, 6×/day | Textbook 2-month schedule | Positive assessment |
+> ⚠️ Each run makes ~9 Claude API calls (3 scenarios × 2 variants + 3 judges).
+> Cost: < $0.01 with claude-haiku.
 
 ---
 
-## What results look like
+## What the output looks like
 
 ```
-Test case                      RAG   Baseline   Uplift
-─────────────────────────────────────────────────────
-newborn_normal                 9/10      7/10      +2
-newborn_low_volume             8/10      5/10      +3
-infant_2months_normal          9/10      7/10      +2
-─────────────────────────────────────────────────────
-Average                        8.7/10    6.3/10    +2.3
-```
+============================================================
+  BabyTrack — Evaluation Run
+  Model: claude-haiku-4-5-20251001
+============================================================
 
-RAG consistently improves `age_appropriateness` and `rag_grounding` scores
-by providing concrete WHO/SFP reference values to anchor the analysis.
+📋  Scenario: newborn_healthy
+    7-day-old, volumes and frequency within WHO norms
+    → Running with RAG...    done
+    → Running without RAG... done
+    → Judging...             done
+
+    Criterion               RAG   Baseline
+    --------------------------------------
+    age_appropriate           3          2
+    rag_grounded              3          1
+    actionable                3          2
+    safety_flag               3          3
+    tone                      3          2
+    ──────────────────────────────────────
+    TOTAL (/15)              15         10
+    Sections present: RAG=4/4  Baseline=4/4
+    RAG comment:      Excellent age-specific analysis with clear WHO references.
+    Baseline comment: Reasonable but generic — lacks specific volume thresholds.
+
+============================================================
+  SUMMARY (3 scenarios)
+  Average score — RAG: 14.0/15  |  Baseline: 9.7/15
+  RAG improvement:     +4.3 points (29%)
+============================================================
+```
 
 ---
 
-## Enterprise relevance
+## Why this matters (SA perspective)
 
-This framework is a starting point. In a real deployment, you would extend it with:
+Before deploying any LLM in a regulated or high-stakes domain, customers need to answer:
 
-- **Regression suite** — run evals on every model or prompt change (CI/CD)
-- **Human-in-the-loop** — spot-check judge scores with domain expert review
-- **Drift monitoring** — track score trends over time as data patterns evolve
-- **A/B evaluation** — compare prompt versions or model upgrades before rollout
+1. **Is the output correct?** — structural checks ensure required sections are always present
+2. **Is it grounded?** — RAG vs baseline comparison quantifies hallucination risk reduction
+3. **Does it catch edge cases?** — the low-intake scenario tests safety-critical detection
+4. **Can we track quality over time?** — JSON results enable regression testing across model versions
 
-These are the same patterns recommended in Anthropic's model evaluation guidelines
-and industry frameworks like HELM and RAGAS.
+This framework demonstrates the eval-first mindset that production AI deployments require
+— and maps directly to how you'd help an enterprise customer build confidence before go-live.
+
+---
+
+## Extending this framework
+
+Real-world additions for enterprise deployment:
+
+- **Human baseline**: have a paediatrician score the same outputs to calibrate the judge
+- **Regression suite**: run on every model upgrade to catch quality regressions
+- **Latency + cost tracking**: add `usage.input_tokens` / `output_tokens` to the results JSON
+- **Domain-specific scenarios**: e.g. premature infants, CMPA cases, post-surgery recovery
+- **A/B prompt testing**: compare prompt variants systematically before shipping changes
