@@ -200,13 +200,14 @@ def _mock_claude_response(text: str = "### ✅ All looks good."):
 def test_analyze_feedings_returns_string(sample_baby, sample_feedings, index):
     with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response()
-        result = analyze_feedings(
+        analysis_text, sources = analyze_feedings(
             baby=sample_baby,
             feedings=sample_feedings,
             period_label="day of 23/02/2026",
             index=index,
         )
-    assert isinstance(result, str) and len(result) > 0
+    assert isinstance(analysis_text, str) and len(analysis_text) > 0
+    assert isinstance(sources, list)
 
 
 def test_analyze_feedings_prompt_has_baby_name(sample_baby, sample_feedings, index):
@@ -230,8 +231,9 @@ def test_analyze_feedings_empty_list(sample_baby, index):
         mock_cls.return_value.messages.create.return_value = _mock_claude_response(
             "No feedings recorded."
         )
-        result = analyze_feedings(baby=sample_baby, feedings=[], index=index)
-    assert isinstance(result, str)
+        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=[], index=index)
+    assert isinstance(analysis_text, str)
+    assert isinstance(sources, list)
 
 
 def test_analyze_feedings_rag_failure_graceful(sample_baby, sample_feedings):
@@ -239,5 +241,6 @@ def test_analyze_feedings_rag_failure_graceful(sample_baby, sample_feedings):
     with patch("app.rag.analyzer.retrieve_context", side_effect=Exception("RAG KO")), \
          patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
         mock_cls.return_value.messages.create.return_value = _mock_claude_response()
-        result = analyze_feedings(baby=sample_baby, feedings=sample_feedings)
-    assert isinstance(result, str)
+        analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=sample_feedings)
+    assert isinstance(analysis_text, str)
+    assert isinstance(sources, list)

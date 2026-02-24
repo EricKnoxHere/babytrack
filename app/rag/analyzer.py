@@ -106,7 +106,7 @@ def analyze_feedings(
     period_label: str = "the period",
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
-) -> str:
+) -> tuple[str, list[dict]]:
     """
     Analyses a baby's feedings via Claude + WHO/SFP RAG context.
 
@@ -118,7 +118,7 @@ def analyze_feedings(
         index_dir: Path to the index (if index not provided).
 
     Returns:
-        Structured markdown text analysis.
+        Tuple of (analysis text, list of source documents with scores).
     """
     # 1. Build the RAG query based on age and feeding type
     age_days = (date.today() - baby.birth_date).days
@@ -136,9 +136,16 @@ def analyze_feedings(
     elif index_dir is not None:
         kwargs["index_dir"] = index_dir
 
+    sources = []
     try:
         nodes = retrieve_context(**kwargs)
         rag_context = format_context(nodes)
+        # Extract source metadata
+        for node in nodes:
+            sources.append({
+                "source": node.metadata.get("file_name", "unknown"),
+                "score": round(node.score, 3) if node.score is not None else None,
+            })
     except Exception as exc:
         logger.warning("RAG retrieval failed (%s) — analysing without context", exc)
         rag_context = "Medical context unavailable (missing index or error)."
@@ -160,4 +167,4 @@ def analyze_feedings(
 
     analysis = message.content[0].text
     logger.info("Analysis generated for %s (%d tokens)", baby.name, message.usage.output_tokens)
-    return analysis
+    return analysis, sources

@@ -226,7 +226,12 @@ async def test_delete_feeding(client: AsyncClient):
 # /analysis
 # ---------------------------------------------------------------------------
 
-MOCK_ANALYSIS = "✅ Simulated analysis: all looks good!"
+MOCK_ANALYSIS_TEXT = "✅ Simulated analysis: all looks good!"
+MOCK_SOURCES = [
+    {"source": "who_infant_feeding.md", "score": 0.92},
+    {"source": "sfp_guide.md", "score": 0.85},
+]
+MOCK_ANALYSIS = (MOCK_ANALYSIS_TEXT, MOCK_SOURCES)
 
 
 async def test_analysis_day(client: AsyncClient):
@@ -237,7 +242,8 @@ async def test_analysis_day(client: AsyncClient):
     assert data["baby_id"] == 1
     assert data["baby_name"] == "Léna"  # name updated via PATCH
     assert data["period"] == "day"
-    assert data["analysis"] == MOCK_ANALYSIS
+    assert data["analysis"] == MOCK_ANALYSIS_TEXT
+    assert len(data["sources"]) == 2
 
 
 async def test_analysis_week(client: AsyncClient):
@@ -245,6 +251,7 @@ async def test_analysis_week(client: AsyncClient):
         resp = await client.get("/analysis/1?period=week&reference_date=2025-01-21")
     assert resp.status_code == 200
     assert resp.json()["period"] == "week"
+    assert len(resp.json()["sources"]) == 2
 
 
 async def test_analysis_no_feedings(client: AsyncClient):

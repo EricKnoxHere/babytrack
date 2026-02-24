@@ -20,12 +20,18 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 PeriodType = Literal["day", "week"]
 
 
+class SourceReference(BaseModel):
+    source: str
+    score: Optional[float] = None
+
+
 class AnalysisResponse(BaseModel):
     baby_id: int
     baby_name: str
     period: PeriodType
     period_label: str
     analysis: str
+    sources: list[SourceReference] = []
 
 
 @router.get("/{baby_id}", response_model=AnalysisResponse)
@@ -72,7 +78,7 @@ async def analyze_baby_feedings(
 
     # 4. Call the analyzer in a thread (it is synchronous / blocking)
     loop = asyncio.get_event_loop()
-    analysis_text = await loop.run_in_executor(
+    analysis_text, sources = await loop.run_in_executor(
         None,
         partial(
             analyze_feedings,
@@ -89,4 +95,5 @@ async def analyze_baby_feedings(
         period=period,
         period_label=period_label,
         analysis=analysis_text,
+        sources=[SourceReference(**s) for s in sources],
     )
