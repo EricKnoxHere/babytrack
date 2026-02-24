@@ -1,26 +1,33 @@
 # 🍼 BabyTrack
 
-> **Portfolio project — Solutions Architect, Applied AI @ Anthropic**
-
-BabyTrack is a production-grade RAG application built to demonstrate how Claude can be integrated into a regulated-data context — from architecture design to evaluation framework.
-
-**The premise:** parents of newborns track every feeding (time, volume, type) but have no way to interpret that data against medical guidelines. BabyTrack closes that gap: it retrieves relevant WHO/SFP recommendations at query time and uses Claude to turn raw feeding logs into structured, personalised guidance.
-
-→ **[Live demo](#)** · [Eval results](#-evaluation-framework)
+> **Portfolio project — Solutions Architect @ Anthropic**
+> Demonstrating how RAG + Claude can be deployed responsibly in a regulated, high-stakes domain.
 
 ---
 
-## What this project demonstrates
+## The idea
 
-This isn't just a working app — it's designed to reflect the decisions an SA would need to make and explain when helping an enterprise customer adopt Claude.
+A paediatrician has limited time. A new parent has infinite anxiety. There's a gap.
 
-| Skill | Implementation |
-|-------|---------------|
-| **RAG architecture** | LlamaIndex + HuggingFace embeddings, persisted vector index, configurable top-k retrieval |
-| **Claude integration** | Structured prompting, grounded on retrieved context, error handling for production |
-| **Evaluation framework** | LLM-as-judge scoring (5 criteria), RAG vs baseline comparison — [`evals/`](evals/README.md) |
-| **API design** | FastAPI with async SQLite, Pydantic v2 validation, dependency injection |
-| **Deployment readiness** | Render config, `.env` management, 59 tests · 0 failures · zero network calls |
+BabyTrack closes it: an infant feeding tracker that doesn't just store data, but analyses it — grounded in WHO and SFP medical guidelines — and surfaces personalised, actionable recommendations via Claude.
+
+The real point isn't the app. It's what building it required me to think about:
+
+- How do you ground an LLM in a specific knowledge base without hallucination risk?
+- How do you measure whether the grounding actually helps?
+- How do you build an API that an enterprise team could extend, not just a demo that runs on localhost?
+
+---
+
+## What it does
+
+| Layer | Function |
+|-------|----------|
+| **Streamlit UI** | Log feedings, visualise 7–30 day trends, trigger AI analysis |
+| **FastAPI** | REST API with Pydantic validation, async SQLite, OpenAPI docs |
+| **RAG pipeline** | LlamaIndex indexes WHO/SFP medical guides; top-k chunks retrieved per query |
+| **Claude** | Structured analysis grounded in retrieved context; consistent markdown output |
+| **Eval framework** | LLM-as-judge scores outputs on 5 criteria; RAG vs no-RAG comparison |
 
 ---
 
@@ -29,89 +36,88 @@ This isn't just a working app — it's designed to reflect the decisions an SA w
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                       STREAMLIT UI                          │
-│  Feeding entry · Dashboard · AI Analysis                    │
+│  Dashboard · Feeding entry · AI Analysis                    │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTP
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    FASTAPI (main.py)                        │
-│  POST /babies  ·  POST /feedings  ·  GET /analysis/{id}    │
+│  POST /babies   POST /feedings   GET /analysis/{id}        │
+│  GET  /babies   GET  /feedings   GET /health               │
 └───────────┬─────────────────────────┬───────────────────────┘
             │                         │
             ▼                         ▼
 ┌───────────────────┐     ┌───────────────────────────────────┐
 │  SQLite           │     │         RAG PIPELINE               │
-│  (aiosqlite)      │     │                                   │
-│  ─────────────    │     │  data/docs/                       │
-│  babies           │     │  ├── who_infant_feeding.md        │
-│  feedings         │     │  └── sfp_infant_feeding_guide.md  │
-└───────────────────┘     │           │                        │
-                          │           ▼                        │
-                          │  LlamaIndex VectorStoreIndex       │
-                          │  BAAI/bge-small-en-v1.5            │
-                          │           │ top-4 chunks           │
+│  ─────────────── │     │                                   │
+│  babies           │     │  data/docs/                       │
+│  feedings         │     │  ├── who_infant_feeding.md        │
+└───────────────────┘     │  └── sfp_infant_feeding_guide.md  │
+                          │           │                        │
+                          │    LlamaIndex VectorStoreIndex     │
+                          │    (BAAI/bge-small-en-v1.5)       │
+                          │           │  top-k chunks          │
                           │           ▼                        │
                           │  ┌─────────────────────┐          │
-                          │  │     Claude Haiku     │          │
-                          │  │  Structured prompt   │          │
+                          │  │  Claude Haiku        │          │
+                          │  │  (Anthropic API)     │          │
                           │  └─────────────────────┘          │
                           └───────────────────────────────────┘
 ```
 
-### Analysis flow (step by step)
+### Why RAG here?
 
-1. `GET /analysis/{baby_id}?period=day` fetches feedings from SQLite
-2. A **RAG query** is built dynamically: baby's age + feeding type → semantic search
-3. LlamaIndex retrieves the **top-4 relevant chunks** from WHO/SFP medical guides
-4. A structured prompt is sent to **Claude** with baby profile + feedings + medical context
-5. Claude returns a markdown analysis (positives · attention points · recommendations · summary)
-6. The response is displayed in the Streamlit UI
+A generic LLM knows roughly what WHO recommendations say. A RAG-grounded LLM cites the *specific thresholds and intervals* from the actual guidelines — the difference between "drink more water" and "a 7-day-old should receive 60–90 ml per feed every 2–3 hours."
+
+In a regulated domain (medical, legal, financial), that precision gap is the entire value proposition of RAG.
 
 ---
 
-## 📊 Evaluation framework
+## Evaluation framework
 
-One of the hardest questions in enterprise LLM adoption is: *"How do we know it's working?"*
+Before shipping any LLM feature to production, the right question is: *how do you know it's giving good answers?*
 
-BabyTrack includes a full evaluation framework in [`evals/`](evals/README.md) that addresses this directly:
+The `evals/` folder answers this. An LLM-as-judge script runs 3 clinical scenarios (healthy newborn, low-intake alert, mixed feeding) and scores each Claude response across 5 criteria, with and without RAG context:
 
-- **LLM-as-judge** — Claude scores its own outputs against a 5-criterion rubric
-- **RAG vs baseline** — quantified comparison: analysis with vs without medical context
-- **Targeted test cases** — normal newborn, low-intake warning, 2-month milestone
+| Criterion | What it checks |
+|-----------|---------------|
+| `age_appropriate` | References norms specific to the baby's age |
+| `rag_grounded` | Reflects retrieved WHO/SFP guidelines, not generic knowledge |
+| `actionable` | Recommendations are concrete and immediately usable |
+| `safety_flag` | Correctly raises or withholds a clinical concern |
+| `tone` | Reassuring when warranted; appropriately concerned when not |
+
+```bash
+python evals/eval_analysis.py
+# → Scores per scenario, RAG vs baseline delta, saved to evals/results/
+```
+
+Results from a sample run:
 
 ```
-Test case                      RAG   Baseline   Uplift
-─────────────────────────────────────────────────────
-newborn_normal                 9/10      7/10      +2
-newborn_low_volume             8/10      5/10      +3
-infant_2months_normal          9/10      7/10      +2
-─────────────────────────────────────────────────────
-Average                        8.7/10    6.3/10    +2.3
+Average score — RAG: 15.0/15  |  Baseline: 14.7/15
+RAG improvement: +0.3 points across scenarios
+Sections present: 4/4 on all runs
 ```
 
-> These are illustrative scores — run `python evals/eval_analysis.py` for live results against the deployed model.
+The eval framework is as important as the application itself — it's the scaffolding you'd build with any enterprise customer before a production go-live.
+
+> See `evals/README.md` for the full methodology and how to extend it.
 
 ---
 
-## Key technical decisions
+## Enterprise considerations
 
-| Decision | Rationale |
-|----------|-----------|
-| **FastAPI + async** | Native async matches aiosqlite; auto-generated OpenAPI simplifies customer integration demos |
-| **SQLite → PostgreSQL path** | SQLite for zero-config portability; the service layer is DB-agnostic for easy migration |
-| **LlamaIndex** | Mature RAG abstraction with index persistence — reduces cold-start latency from ~40s to <1s after first run |
-| **BAAI/bge-small-en-v1.5** | 130 MB, runs fully offline — no embedding API dependency, relevant for enterprise data privacy requirements |
-| **Claude Haiku** | Fast and cost-effective for structured analysis; easily swappable to Sonnet/Opus for higher-stakes domains |
-| **Streamlit** | Rapid interactive demo surface; in production this would be replaced by a customer's existing frontend |
+This is a portfolio demo, but the architecture decisions reflect real deployment constraints:
 
-### How this scales to enterprise
-
-A customer integrating this pattern into their stack would typically need to address:
-
-- **Data privacy** — embeddings computed locally (no data leaves the perimeter)
-- **Knowledge base refresh** — LlamaIndex supports incremental indexing; guideline updates don't require full reindex
-- **Multi-tenancy** — the current SQLite model maps cleanly to a PostgreSQL schema with tenant isolation
-- **Observability** — add eval runs to CI/CD to catch quality regressions on prompt or model changes
+| Concern | Decision made | Enterprise path |
+|---------|--------------|-----------------|
+| **Data isolation** | SQLite per deployment | Swap to PostgreSQL; one schema per tenant |
+| **Hallucination risk** | RAG-grounded prompts + structural output format | Eval suite + human review for high-stakes outputs |
+| **Observability** | Structured logging, token counts captured | Feed into Datadog / CloudWatch |
+| **Auth** | Not implemented | Add OAuth2 / SSO at the API gateway layer |
+| **Index freshness** | Manual rebuild | Trigger on document update via webhook |
+| **Cost control** | Haiku model, 1024 max tokens | Budget alerts + model tiering by use case |
 
 ---
 
@@ -122,17 +128,18 @@ A customer integrating this pattern into their stack would typically need to add
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Configure
+# 2. Set your Anthropic API key
 cp .env.example .env
-# → Add your ANTHROPIC_API_KEY
+# Edit .env → add ANTHROPIC_API_KEY
 
 # 3. Start the API
 uvicorn main:app --reload
 
 # 4. Start the UI (new terminal)
 streamlit run ui/app.py
-# → http://localhost:8501
 ```
+
+Open: **http://localhost:8501**
 
 ---
 
@@ -143,26 +150,11 @@ pytest tests/ -v
 # 59 tests · 0 failures · zero network calls
 ```
 
-| Layer | Tests | What's covered |
-|-------|-------|----------------|
-| Data layer | 21 | Async CRUD, cascade delete, edge cases |
+| Suite | Tests | What's covered |
+|-------|-------|---------------|
+| Data layer | 21 | Models, async CRUD, cascade deletes |
 | RAG pipeline | 18 | Indexer, retriever, analyzer (MockEmbedding + mock Anthropic) |
-| API | 20 | All endpoints, validation, error cases |
-
----
-
-## Deployment (Render)
-
-The repo includes a `render.yaml` for one-click deployment (API + UI as separate services).
-
-```bash
-# 1. Fork the repo · Connect Render to GitHub
-# 2. New Blueprint → point to repo → Render detects render.yaml
-# 3. Set ANTHROPIC_API_KEY in the Render dashboard
-# 4. Deploy
-```
-
-> On Render's free tier, SQLite is ephemeral — data resets on restart. Sufficient for a portfolio demo; production would use a managed PostgreSQL instance.
+| FastAPI | 20 | All endpoints, validation, error cases |
 
 ---
 
@@ -170,21 +162,49 @@ The repo includes a `render.yaml` for one-click deployment (API + UI as separate
 
 ```
 babytrack/
-├── main.py                  # FastAPI entry point + lifespan (DB init, RAG index load)
+├── main.py                  # FastAPI entry point + lifespan
 ├── app/
 │   ├── models/              # Pydantic v2 — Baby, Feeding
 │   ├── services/            # Async CRUD (aiosqlite)
-│   ├── rag/                 # indexer · retriever · analyzer
-│   └── api/routes/          # health · babies · feedings · analysis
-├── evals/                   # Evaluation framework (LLM-as-judge + RAG comparison)
+│   ├── rag/                 # LlamaIndex — indexer, retriever, analyzer
+│   └── api/routes/          # health, babies, feedings, analysis
+├── evals/                   # LLM-as-judge eval framework
+│   ├── eval_analysis.py     # 3 scenarios · 5 criteria · RAG vs baseline
+│   └── results/             # JSON results per run
 ├── ui/
-│   ├── app.py               # Streamlit dashboard (3 pages)
-│   └── api_client.py        # Typed HTTP wrapper
+│   ├── app.py               # Streamlit dashboard
+│   └── api_client.py        # HTTP wrapper
 └── data/
-    ├── docs/                # WHO/SFP medical guides (markdown)
+    ├── docs/                # WHO/SFP medical guidelines (markdown)
     └── index/               # Persisted vector index (gitignored)
 ```
 
 ---
 
+## Key technical decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **FastAPI** | Native async, auto OpenAPI, Pydantic validation — what most enterprise Python teams are standardising on |
+| **SQLite + aiosqlite** | Zero-config for a demo; same service layer works with PostgreSQL |
+| **LlamaIndex** | Mature RAG abstraction with index persistence — not reinventing retrieval |
+| **BAAI/bge-small-en-v1.5** | 130 MB, runs offline, multilingual — no embedding API dependency |
+| **Structured prompt output** | Fixed markdown sections make parsing and eval deterministic |
+| **LLM-as-judge** | Industry-standard pattern for scalable output evaluation without human labellers |
+
+---
+
+## Deployment (Render)
+
+`render.yaml` is included — two services (API + UI), auto-deployed from GitHub.
+
+```bash
+# Fork → connect Render → "New Blueprint" → add ANTHROPIC_API_KEY → deploy
+```
+
+> ⚠️ Free tier uses ephemeral storage. For persistence, swap SQLite for Render PostgreSQL (one config change in `database.py`).
+
+---
+
 *Built as part of an SA Applied AI portfolio — Anthropic Paris.*
+*The goal was not to build a baby app. The goal was to build something that shows how I think about RAG architecture, eval, and production deployment.*
