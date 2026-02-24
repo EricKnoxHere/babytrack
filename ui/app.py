@@ -96,6 +96,58 @@ def format_datetime(dt_str: str) -> str:
     return datetime.fromisoformat(dt_str).strftime("%d/%m %H:%M")
 
 
+def display_feeding_with_actions(f: dict, baby_id: int):
+    """Display a feeding with edit/delete buttons."""
+    col1, col2, col3 = st.columns([3, 0.8, 0.8])
+    
+    icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
+    t = format_datetime(f["fed_at"])
+    note = f" · _{f['notes']}_" if f.get("notes") else ""
+    
+    with col1:
+        st.markdown(f"`{t}` {icon} **{f['quantity_ml']}ml**{note}")
+    
+    with col2:
+        if st.button("✏️", key=f"edit_{f['id']}", help="Edit"):
+            st.session_state[f"edit_feeding_{f['id']}"] = True
+    
+    with col3:
+        if st.button("🗑️", key=f"del_{f['id']}", help="Delete"):
+            try:
+                api.delete_feeding(f["id"])
+                st.success("✅ Deleted")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Delete failed: {e}")
+    
+    # Edit form if activated
+    if st.session_state.get(f"edit_feeding_{f['id']}"): 
+        st.divider()
+        st.subheader(f"Edit feeding (ID: {f['id']})")
+        with st.form(f"edit_form_{f['id']}"):
+            fed_dt = datetime.fromisoformat(f["fed_at"])
+            new_date = st.date_input("Date", value=fed_dt.date(), key=f"ed_{f['id']}_date")
+            new_time = st.time_input("Time", value=fed_dt.time(), key=f"ed_{f['id']}_time")
+            new_qty = st.number_input("Quantity (ml)", value=f["quantity_ml"], min_value=1, max_value=500, key=f"ed_{f['id']}_qty")
+            new_type = st.selectbox("Type", ["bottle", "breastfeeding"], index=0 if f["feeding_type"] == "bottle" else 1, key=f"ed_{f['id']}_type")
+            new_notes = st.text_input("Notes", value=f.get("notes") or "", key=f"ed_{f['id']}_notes")
+            
+            if st.form_submit_button("💾 Save changes", use_container_width=True):
+                try:
+                    new_fed_at = datetime.combine(new_date, new_time).isoformat()
+                    api.update_feeding(f["id"], {
+                        "fed_at": new_fed_at,
+                        "quantity_ml": int(new_qty),
+                        "feeding_type": new_type,
+                        "notes": new_notes or None,
+                    })
+                    st.success("✅ Updated")
+                    st.session_state[f"edit_feeding_{f['id']}"] = False
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Update failed: {e}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Sidebar — baby selection
 # ─────────────────────────────────────────────────────────────────────────────
@@ -210,10 +262,7 @@ if page == "🍼 Quick entry":
             
             st.divider()
             for f in sorted(today_feedings, key=lambda x: x["fed_at"]):
-                t = format_time(f["fed_at"])
-                icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
-                note = f" · _{f['notes']}_" if f.get("notes") else ""
-                st.markdown(f"**{t}** {icon} **{f['quantity_ml']}ml**{note}")
+                display_feeding_with_actions(f, selected_baby["id"])
         else:
             st.info("No feedings logged today yet.")
 
@@ -325,10 +374,7 @@ elif page == "📊 Dashboard":
         st.subheader("Recent feedings")
         recent = sorted(feedings, key=lambda x: x["fed_at"], reverse=True)[:10]
         for f in recent:
-            icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
-            t = format_datetime(f["fed_at"])
-            note = f" — _{f['notes']}_" if f.get("notes") else ""
-            st.markdown(f"`{t}` {icon} **{f['quantity_ml']}ml**{note}")
+            display_feeding_with_actions(f, selected_baby["id"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE 3 — AI Analysis
