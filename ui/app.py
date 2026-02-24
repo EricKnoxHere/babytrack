@@ -537,6 +537,17 @@ elif page == "🤖 AI Analysis":
                 st.success(f"✅ Analysis for: **{result['period_label']}**")
                 st.divider()
                 st.markdown(result["analysis"])
+                
+                # Show RAG sources if available
+                if result.get("sources"):
+                    st.divider()
+                    st.subheader("📚 Medical sources cited")
+                    for src in result["sources"]:
+                        score = f" (relevance: {src['score']})" if src.get("score") else ""
+                        st.caption(f"🔹 {src['source']}{score}")
+                else:
+                    st.caption("_No medical context used for this analysis._")
+                    
             except requests.HTTPError as e:
                 try:
                     detail = e.response.json().get("detail", str(e))
