@@ -11,6 +11,7 @@ from llama_index.core import VectorStoreIndex
 
 from app.models.baby import Baby
 from app.models.feeding import Feeding
+from app.models.weight import Weight
 from .retriever import format_context, retrieve_context
 
 logger = logging.getLogger(__name__)
@@ -48,11 +49,53 @@ def _summarize_feedings(feedings: list[Feeding]) -> str:
     )
 
 
+def _summarize_weights(weights: list[Weight]) -> str:
+    """Builds a short weight summary for the prompt."""
+    if not weights:
+        return ""
+    lines = [
+        f"- {w.measured_at.strftime('%d/%m %H:%M')}: {w.weight_g}g"
+        + (f" — note: {w.notes}" if w.notes else "")
+        for w in sorted(weights, key=lambda x: x.measured_at)
+    ]
+    return "\n".join(lines)
+
+
+def _extract_contextual_events(
+    feedings: list[Feeding],
+    weights: list[Weight],
+) -> str:
+    """
+    Collects all non-empty notes from feedings and weights into a
+    chronological event log. Returns empty string if no notes exist.
+    """
+    events: list[tuple[datetime, str, str]] = []  # (timestamp, type, note)
+
+    for f in feedings:
+        if f.notes and f.notes.strip():
+            events.append((f.fed_at, "feeding", f.notes.strip()))
+
+    for w in weights:
+        if w.notes and w.notes.strip():
+            events.append((w.measured_at, "weight", w.notes.strip()))
+
+    if not events:
+        return ""
+
+    events.sort(key=lambda x: x[0])
+    lines = [
+        f"- {ts.strftime('%d/%m %H:%M')} [{kind}]: {note}"
+        for ts, kind, note in events
+    ]
+    return "\n".join(lines)
+
+
 def _build_prompt(
     baby: Baby,
     feedings: list[Feeding],
     period_label: str,
     rag_context: str,
+    weights: list[Weight] | None = None,
 ) -> str:
     feeding_summary = _summarize_feedings(feedings)
     age_days = (date.today() - baby.birth_date).days
@@ -66,10 +109,29 @@ def _build_prompt(
     else:
         age_str = f"{age_months} months"
 
+    # Weight section (optional)
+    weight_section = ""
+    if weights:
+        weight_summary = _summarize_weights(weights)
+        weight_section = f"\n## Weight measurements\n{weight_summary}\n"
+
+    # Contextual events — all notes from feedings and weights surfaced explicitly
+    contextual_events = _extract_contextual_events(feedings, weights or [])
+    context_section = ""
+    if contextual_events:
+        context_section = f"""
+## Contextual events (parent notes)
+The parent added the following notes. **These are important context clues** — use them to
+explain abnormal values rather than raising false alarms. For example, lower intake during
+illness is expected; a hot day may increase fluid needs; trying solids affects milk volumes.
+
+{contextual_events}
+"""
+
     return f"""You are a pediatric assistant specialising in infant nutrition.
 Analyse the baby's feeding data and provide kind, precise, and actionable recommendations.
 Base your response on the WHO/SFP medical context provided below.
-
+{context_section}
 ## Medical reference context (WHO / SFP)
 {rag_context}
 
@@ -77,7 +139,7 @@ Base your response on the WHO/SFP medical context provided below.
 - Name: {baby.name}
 - Age: {age_str}
 - Birth weight: {baby.birth_weight_grams} g
-
+{weight_section}
 ## Feeding data — {period_label}
 {feeding_summary}
 
@@ -88,15 +150,17 @@ Respond in English, in a structured format, with the following sections:
 Note what is going well (volumes, frequency, regularity).
 
 ### ⚠️ Points of attention
-Flag deviations from WHO/SFP recommendations for this age (volumes too low/high, intervals too long/short, etc.).
+Flag deviations from WHO/SFP recommendations for this age. If contextual notes explain a
+deviation (e.g. illness, heat), mention the context rather than raising an alarm.
 
 ### 💡 Recommendations
-Give 2–3 concrete actions tailored to the baby's age.
+Give 2–3 concrete actions tailored to the baby's age and the contextual notes if any.
 
 ### 📊 Summary
-A one-sentence summary of the feeding for the analysed period.
+A one-sentence summary of the feeding for the analysed period, mentioning any key context.
 
-Be reassuring if the data is normal. Recommend consulting a paediatrician only if a significant anomaly is detected.
+Be reassuring if the data is normal. Recommend consulting a paediatrician only if a
+significant anomaly remains unexplained by the contextual notes.
 """
 
 
@@ -106,6 +170,7 @@ def analyze_feedings(
     period_label: str = "the period",
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
+    weights: list[Weight] | None = None,
 ) -> tuple[str, list[dict]]:
     """
     Analyses a baby's feedings via Claude + WHO/SFP RAG context.
@@ -116,6 +181,8 @@ def analyze_feedings(
         period_label: Human-readable period label (e.g. "day of 23/02/2026").
         index: Pre-loaded vector index (optional, avoids reload).
         index_dir: Path to the index (if index not provided).
+        weights: Recent weight measurements (optional). Notes on weight entries
+                 are surfaced as contextual events to help Claude interpret values.
 
     Returns:
         Tuple of (analysis text, list of source documents with scores).
@@ -151,7 +218,7 @@ def analyze_feedings(
         rag_context = "Medical context unavailable (missing index or error)."
 
     # 3. Build and send the prompt to Claude
-    prompt = _build_prompt(baby, feedings, period_label, rag_context)
+    prompt = _build_prompt(baby, feedings, period_label, rag_context, weights=weights)
 
     client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY from environment
     try:

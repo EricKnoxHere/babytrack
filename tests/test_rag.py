@@ -20,7 +20,8 @@ from app.models.baby import Baby
 from app.models.feeding import Feeding
 from app.rag.indexer import build_index, load_index
 from app.rag.retriever import format_context, retrieve_context
-from app.rag.analyzer import analyze_feedings, _summarize_feedings
+from app.rag.analyzer import analyze_feedings, _summarize_feedings, _extract_contextual_events
+from app.models.weight import Weight
 
 DOCS_DIR = Path("data/docs")
 MOCK_EMBED_DIM = 384  # simulated dimension
@@ -186,6 +187,56 @@ def test_summarize_mixed_feedings(sample_baby):
     ]
     result = _summarize_feedings(feedings)
     assert "mixed" in result.lower()
+
+
+# ─── Contextual events tests ──────────────────────────────────────────────────
+
+def test_extract_contextual_events_empty():
+    """No notes → empty string."""
+    feedings = [
+        Feeding(id=1, baby_id=1, fed_at=datetime(2026, 2, 23, 8), quantity_ml=100,
+                feeding_type="bottle", notes=None, created_at=datetime(2026, 2, 23, 8)),
+    ]
+    result = _extract_contextual_events(feedings, [])
+    assert result == ""
+
+
+def test_extract_contextual_events_feeding_notes():
+    """Feeding notes appear in the events log."""
+    feedings = [
+        Feeding(id=1, baby_id=1, fed_at=datetime(2026, 2, 23, 8), quantity_ml=70,
+                feeding_type="bottle", notes="baby seemed unwell, refused bottle",
+                created_at=datetime(2026, 2, 23, 8)),
+    ]
+    result = _extract_contextual_events(feedings, [])
+    assert "unwell" in result
+    assert "[feeding]" in result
+
+
+def test_extract_contextual_events_weight_notes():
+    """Weight notes appear in the events log."""
+    weights = [
+        Weight(id=1, baby_id=1, measured_at=datetime(2026, 2, 23, 9),
+               weight_g=3250, notes="hot day, sweating a lot", created_at=datetime(2026, 2, 23, 9)),
+    ]
+    result = _extract_contextual_events([], weights)
+    assert "hot day" in result
+    assert "[weight]" in result
+
+
+def test_extract_contextual_events_chronological():
+    """Events are ordered chronologically."""
+    feedings = [
+        Feeding(id=1, baby_id=1, fed_at=datetime(2026, 2, 23, 12), quantity_ml=80,
+                feeding_type="bottle", notes="late feed", created_at=datetime(2026, 2, 23, 12)),
+    ]
+    weights = [
+        Weight(id=1, baby_id=1, measured_at=datetime(2026, 2, 23, 8),
+               weight_g=3250, notes="morning checkup", created_at=datetime(2026, 2, 23, 8)),
+    ]
+    result = _extract_contextual_events(feedings, weights)
+    # morning checkup should appear before late feed
+    assert result.index("morning checkup") < result.index("late feed")
 
 
 # ─── Analyzer tests (mock Anthropic) ─────────────────────────────────────────

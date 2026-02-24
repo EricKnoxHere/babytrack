@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from app.api.dependencies import DbDep
 from app.models.report import AnalysisReport, AnalysisReportSummary
 from app.rag.analyzer import analyze_feedings
-from app.services import baby_service, feeding_service, report_service
+from app.services import baby_service, feeding_service, report_service, weight_service
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,10 @@ async def analyze_baby_feedings(
             detail=f"No feedings recorded for the {period_label}",
         )
 
+    # Fetch recent weight entries (last 30 days) to provide growth context + notes
+    weight_start = ref - timedelta(days=30) if period == "day" else ref - timedelta(days=13)
+    weights = await weight_service.get_weights_by_date_range(db, baby_id, weight_start, ref)
+
     rag_index = getattr(request.app.state, "rag_index", None)
 
     loop = asyncio.get_event_loop()
@@ -82,6 +86,7 @@ async def analyze_baby_feedings(
             feedings=feedings,
             period_label=period_label,
             index=rag_index,
+            weights=weights or None,
         ),
     )
 
