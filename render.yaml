@@ -25,7 +25,4 @@ services:
     startCommand: streamlit run ui/app.py --server.port 10000 --server.address 0.0.0.0
     envVars:
       - key: BABYTRACK_API_URL
-        fromService:
-          type: web
-          name: babytrack-api
-          property: host
+        value: https://babytrack-api.onrender.com
