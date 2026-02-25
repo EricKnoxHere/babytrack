@@ -16,13 +16,21 @@ ANALYSIS_TIMEOUT = 120  # seconds — RAG + Claude can be slow on first run
 
 
 def _get(path: str, params: dict | None = None, timeout: int = TIMEOUT) -> Any:
-    resp = requests.get(f"{API_BASE}{path}", params=params, timeout=timeout)
+    try:
+        resp = requests.get(f"{API_BASE}{path}", params=params, timeout=timeout, verify=True)
+    except Exception:
+        # Fallback: disable SSL verification if certificate issues on Render
+        resp = requests.get(f"{API_BASE}{path}", params=params, timeout=timeout, verify=False)
     resp.raise_for_status()
     return resp.json()
 
 
 def _post(path: str, payload: dict, timeout: int = TIMEOUT) -> Any:
-    resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout)
+    try:
+        resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout, verify=True)
+    except Exception:
+        # Fallback: disable SSL verification if certificate issues on Render
+        resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout, verify=False)
     resp.raise_for_status()
     return resp.json()
 

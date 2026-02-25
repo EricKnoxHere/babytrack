@@ -78,7 +78,8 @@ def api_ok() -> bool:
     try:
         h = api.health()
         return h.get("status") == "ok"
-    except Exception:
+    except Exception as e:
+        print(f"❌ API health check failed: {e}")
         return False
 
 
