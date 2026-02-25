@@ -7,3 +7,4 @@ data/*.db
 data/index/
 .DS_Store
 .env
+RAG_PROJECT_CONTEXT.md

@@ -15,7 +15,7 @@ services:
       - key: INDEX_DIR
         value: /tmp/babytrack_index
       - key: CLAUDE_MODEL
-        value: claude-3-haiku-20240307
+        value: claude-haiku-4-5-20251001
 
   # ── UI Streamlit ─────────────────────────────────────────────────────────
   - type: web

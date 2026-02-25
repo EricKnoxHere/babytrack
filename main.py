@@ -1,6 +1,7 @@
 """BabyTrack API application entry point."""
 
 import logging
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,18 +29,11 @@ async def lifespan(app: FastAPI):
     await create_tables()
     logger.info("SQLite tables initialized")
 
-    # RAG index (optional — analysis works without context if absent)
-    index_path = Path(INDEX_DIR)
-    try:
-        app.state.rag_index = load_index(index_path)
-        logger.info("RAG index loaded from %s", index_path)
-    except FileNotFoundError:
-        app.state.rag_index = None
-        logger.warning(
-            "RAG index not found (%s). Analysis will run without medical context. "
-            "Run `python -m app.rag.indexer` to build it.",
-            index_path,
-        )
+    # RAG index — mark for lazy loading
+    # Do NOT attempt to load at startup (can timeout on cold start)
+    app.state.rag_index = None
+    app.state.rag_index_path = Path(INDEX_DIR)
+    logger.info("RAG index will load on first use (lazy loading)")
 
     yield
 
