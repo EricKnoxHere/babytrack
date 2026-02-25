@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 from app.api.dependencies import DbDep
 from app.models.report import AnalysisReport, AnalysisReportSummary
-from app.rag.analyzer import AnalysisContext, _expected_feedings_per_hour, analyze_feedings
 from app.services import baby_service, feeding_service, report_service, weight_service
 
 logger = logging.getLogger(__name__)
@@ -73,6 +72,9 @@ async def analyze_baby_feedings(
     baby = await baby_service.get_baby(db, baby_id)
     if not baby:
         raise HTTPException(status_code=404, detail=f"Baby {baby_id} not found")
+
+    # Lazy import RAG only when needed (avoids loading torch/sentence-transformers at startup)
+    from app.rag.analyzer import AnalysisContext, _expected_feedings_per_hour, analyze_feedings
 
     now = datetime.now()
     end_dt = end or now
