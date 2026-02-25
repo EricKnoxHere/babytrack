@@ -4,7 +4,7 @@ services:
     name: babytrack-api
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false          # à renseigner dans le dashboard Render
@@ -22,7 +22,7 @@ services:
     name: babytrack-ui
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run ui/app.py --server.port ${PORT:-10000} --server.address 0.0.0.0
+    startCommand: streamlit run ui/app.py --server.port 10000 --server.address 0.0.0.0
     envVars:
       - key: BABYTRACK_API_URL
         fromService:
