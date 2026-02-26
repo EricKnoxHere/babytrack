@@ -40,6 +40,8 @@ html, body, [class*="css"] {
 }
 [data-testid="stSidebar"] { background: #fafbfc; }
 .block-container { padding-top: 1rem; }
+/* Hide Deploy/settings toolbar without affecting sidebar toggle */
+[data-testid="stToolbar"] { display: none !important; }
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
 /* Prevent chat messages from overflowing */
