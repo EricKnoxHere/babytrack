@@ -1,9 +1,8 @@
 """Records — Unified table of all feedings and weights."""
 
 import streamlit as st
-import pandas as pd
 import requests
-from datetime import datetime
+from datetime import date, datetime
 from ui import api_client as api
 
 
@@ -40,6 +39,7 @@ def render():
             "_sort": f["fed_at"],
             "_kind": "feeding",
             "_id": f["id"],
+            "_raw": f,
         })
 
     for w in weights:
@@ -51,6 +51,7 @@ def render():
             "_sort": w["measured_at"],
             "_kind": "weight",
             "_id": w["id"],
+            "_raw": w,
         })
 
     # Sort newest first
@@ -76,39 +77,111 @@ def render():
 
     st.caption(f"{len(rows)} records")
 
-    # ── Display table ────────────────────────────────────────────────────────
+    # ── Display rows with Edit / Remove buttons ─────────────────────────────
 
-    display_rows = [
-        {"Type": r["type"], "Date": r["date"], "Value": r["value"], "Notes": r["notes"]}
-        for r in rows
-    ]
+    # Session state for editing
+    if "_editing_record" not in st.session_state:
+        st.session_state._editing_record = None
 
-    df = pd.DataFrame(display_rows)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        height=min(len(df) * 35 + 38, 600),
-    )
-
-    # ── Delete section ───────────────────────────────────────────────────────
-
-    with st.expander("🗑️ Delete a record"):
-        st.caption("Enter the row number (1-based) from the table above to delete it.")
-        del_idx = st.number_input(
-            "Row #", min_value=1, max_value=len(rows), value=1, step=1, key="del_row"
+    for i, r in enumerate(rows):
+        col_type, col_date, col_val, col_notes, col_edit, col_del = st.columns(
+            [1.2, 1.5, 1, 2, 0.6, 0.6]
         )
-        if st.button("Delete", type="primary", key="del_confirm"):
-            target = rows[del_idx - 1]
-            try:
-                if target["_kind"] == "feeding":
-                    api.delete_feeding(target["_id"])
-                else:
-                    # No delete_weight in api_client, use raw request
-                    resp = requests.delete(
-                        f"{api.API_BASE}/weights/{target['_id']}", timeout=api.TIMEOUT
+        with col_type:
+            st.markdown(r["type"])
+        with col_date:
+            st.markdown(r["date"])
+        with col_val:
+            st.markdown(f"**{r['value']}**")
+        with col_notes:
+            st.markdown(r["notes"] if r["notes"] else "—")
+        with col_edit:
+            if st.button("✏️", key=f"edit_{i}", help="Edit"):
+                st.session_state._editing_record = i if st.session_state._editing_record != i else None
+                st.rerun()
+        with col_del:
+            if st.button("🗑️", key=f"del_{i}", help="Remove"):
+                try:
+                    if r["_kind"] == "feeding":
+                        api.delete_feeding(r["_id"])
+                    else:
+                        resp = requests.delete(
+                            f"{api.API_BASE}/weights/{r['_id']}", timeout=api.TIMEOUT
+                        )
+                        resp.raise_for_status()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+        # ── Inline edit form ─────────────────────────────────────────────────
+        if st.session_state._editing_record == i:
+            _render_edit_form(r, i, baby)
+
+        # Subtle separator
+        if i < len(rows) - 1:
+            st.markdown(
+                "<hr style='margin:0;border:none;border-top:1px solid #f1f5f9'>",
+                unsafe_allow_html=True,
+            )
+
+
+def _render_edit_form(row: dict, idx: int, baby: dict):
+    """Render an inline edit form for a record."""
+    raw = row["_raw"]
+    kind = row["_kind"]
+
+    with st.form(f"edit_form_{idx}", clear_on_submit=False):
+        if kind == "feeding":
+            dt = datetime.fromisoformat(raw["fed_at"])
+            e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
+            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
+            e_qty = st.number_input(
+                "Amount (ml)", 1, 500, int(raw["quantity_ml"]), step=10, key=f"eqt_{idx}"
+            )
+            e_type = st.selectbox(
+                "Type", ["bottle", "breastfeeding"],
+                index=0 if raw["feeding_type"] == "bottle" else 1,
+                format_func=lambda t: "🍼 Bottle" if t == "bottle" else "🤱 Breast",
+                key=f"etp_{idx}",
+            )
+            e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
+            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            if submitted:
+                new_at = datetime.combine(e_date, e_time).isoformat()
+                try:
+                    api.update_feeding(raw["id"], {
+                        "fed_at": new_at,
+                        "quantity_ml": int(e_qty),
+                        "feeding_type": e_type,
+                        "notes": e_notes or None,
+                    })
+                    st.session_state._editing_record = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+        else:
+            dt = datetime.fromisoformat(raw["measured_at"])
+            e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
+            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
+            e_g = st.number_input(
+                "Weight (g)", 500, 20000, int(raw["weight_g"]), step=50, key=f"ewg_{idx}"
+            )
+            e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
+            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            if submitted:
+                new_at = datetime.combine(e_date, e_time).isoformat()
+                try:
+                    resp = requests.patch(
+                        f"{api.API_BASE}/weights/{raw['id']}",
+                        json={"measured_at": new_at, "weight_g": int(e_g), "notes": e_notes or None},
+                        timeout=api.TIMEOUT,
                     )
                     resp.raise_for_status()
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
+                    st.session_state._editing_record = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    if st.button("Cancel", key=f"cancel_{idx}"):
+        st.session_state._editing_record = None
+        st.rerun()

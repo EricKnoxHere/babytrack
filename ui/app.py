@@ -112,16 +112,17 @@ def _sidebar_form_weight(baby: dict):
                 st.error(f"Error: {e}")
 
 
+# ─── Load babies ─────────────────────────────────────────────────────────────
+
+try:
+    babies = api.list_babies()
+except Exception:
+    babies = []
+
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("### 🍼 BabyTrack")
-
-    # Baby selector
-    try:
-        babies = api.list_babies()
-    except Exception:
-        babies = []
 
     if not babies:
         st.info("No babies registered yet.")
@@ -130,21 +131,30 @@ with st.sidebar:
             st.rerun()
         st.stop()
 
-    labels = {b["name"]: b for b in babies}
-    selected_name = st.selectbox(
-        "Baby", list(labels.keys()), label_visibility="collapsed", key="sidebar_baby_select"
+    # ── Navigation ───────────────────────────────────────────────────────────
+    _nav_options = ["🏠 Home", "📋 Records", "💬 Chat"]
+    _current_idx = next(
+        (i for i, o in enumerate(_nav_options) if o == st.session_state._nav_page), 0
     )
-    st.session_state.selected_baby = labels[selected_name]
+    nav = st.radio(
+        "nav",
+        _nav_options,
+        label_visibility="collapsed",
+        index=_current_idx,
+        key="sidebar_nav",
+    )
+    st.session_state._nav_page = nav
 
     st.markdown("---")
 
     # ── Entry buttons ────────────────────────────────────────────────────────
+    st.markdown("**Add new entry**")
     active_form = st.session_state._sidebar_form
     btn_col1, btn_col2 = st.columns(2)
 
     with btn_col1:
         if st.button(
-            "✕ Close" if active_form == "feeding" else "+ Bottle 🍼",
+            "✕ Close" if active_form == "feeding" else "➕ Bottle 🍼",
             use_container_width=True,
             type="primary" if active_form == "feeding" else "secondary",
             key="sb_btn_feeding",
@@ -154,7 +164,7 @@ with st.sidebar:
 
     with btn_col2:
         if st.button(
-            "✕ Close" if active_form == "weight" else "+ Weight ⚖️",
+            "✕ Close" if active_form == "weight" else "➕ Weight ⚖️",
             use_container_width=True,
             type="primary" if active_form == "weight" else "secondary",
             key="sb_btn_weight",
@@ -170,21 +180,14 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Navigation — 3 tabs
-    _nav_options = ["🏠 Home", "📋 Records", "💬 Chat"]
-    _current_idx = next(
-        (i for i, o in enumerate(_nav_options) if o == st.session_state._nav_page), 0
+    # ── Baby selector ────────────────────────────────────────────────────────
+    st.markdown("**Baby**")
+    labels = {b["name"]: b for b in babies}
+    selected_name = st.selectbox(
+        "Selected baby", list(labels.keys()), label_visibility="collapsed", key="sidebar_baby_select"
     )
-    nav = st.radio(
-        "nav",
-        _nav_options,
-        label_visibility="collapsed",
-        index=_current_idx,
-        key="sidebar_nav",
-    )
-    st.session_state._nav_page = nav
+    st.session_state.selected_baby = labels[selected_name]
 
-    st.markdown("---")
     if st.button("➕ New baby", use_container_width=True, key="sidebar_new_baby"):
         st.session_state._page_override = "CreateBaby"
         st.rerun()

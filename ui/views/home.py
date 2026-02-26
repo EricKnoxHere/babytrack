@@ -28,26 +28,20 @@ def render():
 
     birth_str = baby.get("birth_date") or baby.get("created_at", "")[:10]
     birth = date.fromisoformat(birth_str[:10])
-    age_days = (date.today() - birth).days
-    age_label = f"{age_days // 30}mo {age_days % 30}d" if age_days >= 30 else f"{age_days} days old"
 
-    # ── Header row: title + period selector ──────────────────────────────────
+    # ── Header ───────────────────────────────────────────────────────────────
 
-    h_col, p_col = st.columns([3, 1])
-    with h_col:
-        st.markdown(
-            f"## 🍼 {baby['name']} "
-            f"<span style='color:#94a3b8;font-size:1rem;font-weight:400'>{age_label}</span>",
-            unsafe_allow_html=True,
-        )
-    with p_col:
-        period_label = st.selectbox(
-            "Period",
-            list(_PERIODS.keys()),
-            index=0,
-            key="home_period",
-            label_visibility="collapsed",
-        )
+    st.markdown("## 🏠 Home")
+
+    # ── Period selector (full width, own line) ───────────────────────────────
+
+    period_label = st.selectbox(
+        "Period",
+        list(_PERIODS.keys()),
+        index=0,
+        key="home_period",
+        label_visibility="collapsed",
+    )
 
     period_days = _PERIODS[period_label]
     today = date.today()
