@@ -388,12 +388,13 @@ def analyze_feedings(
 
     _DISCLAIMER = (
         "Always end your response with: "
-        "'This is not medical advice — consult your pediatrician for any concerns.'"
+        "'Ceci n'est pas un avis médical — consultez votre pédiatre pour toute préoccupation.'"
     )
 
     if is_report:
         system_msg = (
             "You are a pediatric nutrition assistant. "
+            "Always respond in French. "
             "Analyse the data and produce a structured report. "
             "Be factual and precise. Always compare the baby's data against "
             "the SFP reference ranges provided. "
@@ -405,6 +406,7 @@ def analyze_feedings(
     else:
         system_msg = (
             "You are a pediatric nutrition assistant helping a parent. "
+            "Always respond in French. "
             "Answer in 2-4 short sentences. Be warm but factual. "
             "No headers, no bullet lists, no emojis, no markdown formatting. "
             "Always compare the baby's data against the SFP reference ranges "

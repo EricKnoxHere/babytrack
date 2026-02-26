@@ -39,7 +39,9 @@ html, body, [class*="css"] {
     font-weight: 600;
 }
 [data-testid="stSidebar"] { background: #fafbfc; }
-.block-container { padding-top: 1.5rem; }
+.block-container { padding-top: 1rem; }
+/* Hide Streamlit top bar so content starts at the very top */
+[data-testid="stHeader"] { display: none !important; }
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
 /* Prevent chat messages from overflowing */

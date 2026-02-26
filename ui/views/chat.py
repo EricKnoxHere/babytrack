@@ -32,34 +32,35 @@ def render():
     except Exception:
         conversations = []
 
-    # ── Top bar: dropdown to reopen + new chat button ────────────────────────
+    # ── Dropdown to reopen past conversations ────────────────────────────
 
-    col_conv, col_new = st.columns([4, 1])
+    def _conv_label(idx: int) -> str:
+        """Format dropdown label: title · date."""
+        if idx == 0:
+            return "— Conversations précédentes —"
+        c = conversations[idx - 1]
+        title = c["title"][:40]
+        ts = c.get("updated_at") or c.get("created_at", "")
+        try:
+            dt = datetime.fromisoformat(ts)
+            date_str = dt.strftime("%d/%m %H:%M")
+        except Exception:
+            date_str = ""
+        return f"{title}  ·  {date_str}" if date_str else title
 
-    with col_conv:
-        conv_labels = ["— Conversations précédentes —"] + [
-            c["title"][:50] for c in conversations
-        ]
-        selected_idx = st.selectbox(
-            "Conversations",
-            range(len(conv_labels)),
-            format_func=lambda i: conv_labels[i],
-            index=0,
-            key="chat_conv_picker",
-            label_visibility="collapsed",
-        )
-        if selected_idx > 0:
-            target = conversations[selected_idx - 1]
-            if st.session_state.chat_conv_id != target["id"]:
-                _save_current_if_needed(baby)
-                _load_conversation(target["id"])
-                st.rerun()
-
-    with col_new:
-        if st.button("➕ Nouveau", use_container_width=True, key="new_chat_btn"):
+    selected_idx = st.selectbox(
+        "Conversations",
+        range(len(conversations) + 1),
+        format_func=_conv_label,
+        index=0,
+        key="chat_conv_picker",
+        label_visibility="collapsed",
+    )
+    if selected_idx > 0:
+        target = conversations[selected_idx - 1]
+        if st.session_state.chat_conv_id != target["id"]:
             _save_current_if_needed(baby)
-            st.session_state.chat_messages = []
-            st.session_state.chat_conv_id = None
+            _load_conversation(target["id"])
             st.rerun()
 
     # ── Empty state: centered welcome + suggestion chips ─────────────────────
@@ -106,19 +107,6 @@ def render():
     # ── Display conversation ─────────────────────────────────────────────────
 
     else:
-        # Delete button for active conversation
-        if st.session_state.chat_conv_id:
-            _, col_del = st.columns([6, 1])
-            with col_del:
-                if st.button("🗑️", key="del_active_conv", help="Supprimer"):
-                    try:
-                        api.delete_conversation(st.session_state.chat_conv_id)
-                    except Exception:
-                        pass
-                    st.session_state.chat_messages = []
-                    st.session_state.chat_conv_id = None
-                    st.rerun()
-
         for msg in st.session_state.chat_messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
