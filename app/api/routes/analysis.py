@@ -94,11 +94,14 @@ async def analyze_baby_feedings(
 
     # Feedings in the requested window
     feedings = await feeding_service.get_feedings_by_datetime_range(db, baby_id, start_dt, end_dt)
-    if not feedings:
+    if not feedings and not question:
+        # No feedings + no question = nothing to analyze (report mode)
         raise HTTPException(
             status_code=404,
             detail=f"No feedings recorded between {start_dt.strftime('%d/%m %H:%M')} and {end_dt.strftime('%d/%m %H:%M')}",
         )
+    if not feedings:
+        feedings = []  # conversational mode: answer from RAG context + baby profile
 
     # Baseline: previous equivalent window
     baseline_start = start_dt - timedelta(hours=hours_elapsed)

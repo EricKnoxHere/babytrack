@@ -187,26 +187,40 @@ Baseline: {baseline_note}
     if weights:
         weight_section = f"\n## Weight measurements\n{_summarize_weights(weights)}\n"
 
-    # ── Data block (shared between report and conversational modes) ────────
-    data_block = f"""{temporal_section}
-{context_section}## Medical reference context (WHO / SFP)
+    # ── Expected norms (safety net from computed data) ─────────────────────
+    feeds_per_day_expected = round(_expected_feedings_per_hour(age_days) * 24)
+    norms_note = f"Age-based estimate: ~{feeds_per_day_expected} feeds/day for a {age_str} old infant."
+
+    # ── Data block: references FIRST, then baby data ──────────────────────
+    data_block = f"""## Medical reference context (WHO / SFP)
 {rag_context}
 
 ## Baby profile
 - Name: {baby.name}
-- Age: {age_str}
+- Age: {age_str} ({age_days} days)
 - Birth weight: {baby.birth_weight_grams} g
+- {norms_note}
 {weight_section}
-## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
+{temporal_section}
+{context_section}## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
 {feeding_summary}"""
+
+    # ── Grounding instructions (shared) ───────────────────────────────────
+    grounding = """## Instructions
+1. First, extract from the medical references above the recommended ranges for this baby's age: feeds/day, ml/feed, total ml/day, expected weight gain.
+2. Compare the baby's actual data against those reference ranges.
+3. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
+4. Do not state that data is "appropriate" or "on track" without citing the specific reference range that supports it."""
 
     # ── Report mode: structured 4-section analysis ────────────────────────
     if _is_report_request(question):
         return f"""{data_block}
 
-## Analysis (concise format)
-**✅ Positive:** What's going well.
-**⚠️ Concerns:** {"Pace off-track?" if ctx.is_partial else "Deviations from norms?"}
+{grounding}
+
+## Output format
+**✅ Positive:** What's going well (cite reference ranges).
+**⚠️ Concerns:** {"Pace off-track vs references?" if ctx.is_partial else "Any metric outside reference ranges?"}
 **💡 Action:** 2–3 concrete steps.
 **📊 Summary:** One sentence.
 """
@@ -214,10 +228,12 @@ Baseline: {baseline_note}
     # ── Conversational mode: short direct answer ─────────────────────────
     return f"""{data_block}
 
+{grounding}
+
 ## Parent's question
 {question}
 
-Answer the parent's question directly.
+Answer the parent's question directly, citing reference values when relevant.
 """
 
 
@@ -249,11 +265,22 @@ def analyze_feedings(
     """
     age_days = (date.today() - baby.birth_date).days
     feeding_types = {f.feeding_type for f in feedings} or {"bottle"}
-    query = (
-        f"recommended bottle volume feeding frequency infant "
-        f"{age_days // 30} months "
-        f"{'bottle formula' if 'bottle' in feeding_types else 'breastfeeding'}"
-    )
+
+    # Age string for RAG query — use exact age for best semantic matching
+    if age_days < 14:
+        age_query = f"{age_days} days old newborn"
+    elif age_days < 60:
+        age_query = f"{age_days // 7} weeks old infant"
+    else:
+        age_query = f"{age_days // 30} months old infant"
+
+    feed_type = "bottle formula" if "bottle" in feeding_types else "breastfeeding"
+
+    # Build a question-aware query when a parent question is provided
+    if question and not _is_report_request(question):
+        query = f"{question} {age_query} {feed_type}"
+    else:
+        query = f"recommended feeding frequency volume {age_query} {feed_type}"
 
     kwargs: dict = {"query": query, "top_k": 4}
     if index is not None:
@@ -279,12 +306,20 @@ def analyze_feedings(
     # ── System message & token budget depend on mode ──────────────────────
     is_report = _is_report_request(question)
 
+    _DISCLAIMER = (
+        "Always end your response with: "
+        "'This is not medical advice — consult your pediatrician for any concerns.'"
+    )
+
     if is_report:
         system_msg = (
             "You are a pediatric nutrition assistant. "
             "Analyse the data and produce a structured report. "
-            "Be factual and precise. Use the WHO/SFP references when relevant. "
-            "Keep each section short — no filler, no exaggeration."
+            "Be factual and precise. Always compare the baby's data against "
+            "the reference ranges from the provided medical documents. "
+            "Never state that a value is normal without citing the reference range. "
+            "Keep each section short — no filler, no exaggeration. "
+            + _DISCLAIMER
         )
         max_tok = MAX_TOKENS
     else:
@@ -292,8 +327,11 @@ def analyze_feedings(
             "You are a pediatric nutrition assistant helping a parent. "
             "Answer in 2-4 short sentences. Be warm but factual. "
             "No headers, no bullet lists, no emojis, no markdown formatting. "
-            "Just a clear, direct answer. Cite a number when relevant. "
-            "If something is concerning, say so plainly without dramatising."
+            "Always compare the baby's data against the reference ranges from "
+            "the provided medical documents. Never state that a value is normal "
+            "without citing the reference range. "
+            "If something is concerning, say so plainly without dramatising. "
+            + _DISCLAIMER
         )
         max_tok = MAX_TOKENS_CONVERSATIONAL
 
@@ -302,6 +340,7 @@ def analyze_feedings(
         message = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=max_tok,
+            temperature=0.2,
             system=system_msg,
             messages=[{"role": "user", "content": prompt}],
         )
