@@ -63,7 +63,7 @@ except Exception:
     api_ok = False
 
 if not api_ok:
-    st.error("❌ API offline — impossible de contacter le backend")
+    st.error("❌ API offline — cannot connect to backend")
     st.stop()
 
 # ─── Sidebar (minimal) ──────────────────────────────────────────────────────
@@ -78,15 +78,15 @@ with st.sidebar:
         babies = []
 
     if not babies:
-        st.info("Aucun bébé enregistré.")
-        if st.button("➕ Créer un bébé", use_container_width=True, type="primary"):
+        st.info("No babies registered yet.")
+        if st.button("➕ Create a baby", use_container_width=True, type="primary"):
             st.session_state._page_override = "CreateBaby"
             st.rerun()
         st.stop()
 
     labels = {b["name"]: b for b in babies}
     selected_name = st.selectbox(
-        "Bébé", list(labels.keys()), label_visibility="collapsed", key="sidebar_baby_select"
+        "Baby", list(labels.keys()), label_visibility="collapsed", key="sidebar_baby_select"
     )
     st.session_state.selected_baby = labels[selected_name]
 
@@ -103,19 +103,19 @@ with st.sidebar:
     st.session_state._nav_page = nav
 
     st.markdown("---")
-    if st.button("➕ Nouveau bébé", use_container_width=True, key="sidebar_new_baby"):
+    if st.button("➕ New baby", use_container_width=True, key="sidebar_new_baby"):
         st.session_state._page_override = "CreateBaby"
         st.rerun()
 
 # ─── Page routing ────────────────────────────────────────────────────────────
 
 if st.session_state.get("_page_override") == "CreateBaby":
-    st.title("👶 Nouveau bébé")
+    st.title("👶 New baby")
     with st.form("create_baby"):
-        name = st.text_input("Prénom")
-        dob = st.date_input("Date de naissance", value=date.today())
-        weight = st.number_input("Poids de naissance (g)", 500, 6000, 3300)
-        if st.form_submit_button("✅ Créer", use_container_width=True, type="primary"):
+        name = st.text_input("Name")
+        dob = st.date_input("Date of birth", value=date.today())
+        weight = st.number_input("Birth weight (g)", 500, 6000, 3300)
+        if st.form_submit_button("✅ Create", use_container_width=True, type="primary"):
             if name:
                 try:
                     baby = api.create_baby(name, dob, int(weight))
@@ -123,10 +123,10 @@ if st.session_state.get("_page_override") == "CreateBaby":
                     st.session_state._page_override = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erreur : {e}")
+                    st.error(f"Error: {e}")
             else:
-                st.warning("Entre un prénom")
-    if st.button("← Retour"):
+                st.warning("Enter a name")
+    if st.button("← Back"):
         st.session_state._page_override = None
         st.rerun()
 
