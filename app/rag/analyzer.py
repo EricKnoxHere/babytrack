@@ -19,6 +19,21 @@ logger = logging.getLogger(__name__)
 
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 MAX_TOKENS = int(os.getenv("ANALYZER_MAX_TOKENS", "1200"))
+MAX_TOKENS_CONVERSATIONAL = 400
+
+# Keywords that trigger a full structured report instead of a conversational answer
+_REPORT_KEYWORDS = {
+    "analyze", "analyse", "analysis", "report", "bilan",
+    "full report", "detailed", "rapport", "complet",
+}
+
+
+def _is_report_request(question: str | None) -> bool:
+    """Return True if the question explicitly asks for a full structured report."""
+    if not question:
+        return True  # no question = default to full report
+    q = question.lower().strip()
+    return any(kw in q for kw in _REPORT_KEYWORDS)
 
 
 # ─── Analysis context ─────────────────────────────────────────────────────────
@@ -122,6 +137,7 @@ def _build_prompt(
     rag_context: str,
     ctx: AnalysisContext,
     weights: list[Weight] | None = None,
+    question: str | None = None,
 ) -> str:
     feeding_summary = _summarize_feedings(feedings)
     age_days = (date.today() - baby.birth_date).days
@@ -171,11 +187,8 @@ Baseline: {baseline_note}
     if weights:
         weight_section = f"\n## Weight measurements\n{_summarize_weights(weights)}\n"
 
-    return f"""You are a pediatric assistant specialising in infant nutrition.
-Analyse the baby's feeding data and provide kind, precise, and actionable recommendations.
-Base your response on the WHO/SFP medical context provided below.
-
-{temporal_section}
+    # ── Data block (shared between report and conversational modes) ────────
+    data_block = f"""{temporal_section}
 {context_section}## Medical reference context (WHO / SFP)
 {rag_context}
 
@@ -185,13 +198,26 @@ Base your response on the WHO/SFP medical context provided below.
 - Birth weight: {baby.birth_weight_grams} g
 {weight_section}
 ## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
-{feeding_summary}
+{feeding_summary}"""
+
+    # ── Report mode: structured 4-section analysis ────────────────────────
+    if _is_report_request(question):
+        return f"""{data_block}
 
 ## Analysis (concise format)
 **✅ Positive:** What's going well.
 **⚠️ Concerns:** {"Pace off-track?" if ctx.is_partial else "Deviations from norms?"}
 **💡 Action:** 2–3 concrete steps.
 **📊 Summary:** One sentence.
+"""
+
+    # ── Conversational mode: short direct answer ─────────────────────────
+    return f"""{data_block}
+
+## Parent's question
+{question}
+
+Answer the parent's question directly.
 """
 
 
@@ -204,6 +230,7 @@ def analyze_feedings(
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
     weights: list[Weight] | None = None,
+    question: str | None = None,
 ) -> tuple[str, list[dict]]:
     """
     Analyses a baby's feedings via Claude + WHO/SFP RAG context.
@@ -215,6 +242,7 @@ def analyze_feedings(
         index: Pre-loaded vector index (optional).
         index_dir: Path to the index (if index not provided).
         weights: Recent weight measurements + notes (optional).
+        question: Parent's free-text question (conversational mode).
 
     Returns:
         Tuple of (analysis text, list of source dicts).
@@ -246,13 +274,35 @@ def analyze_feedings(
         logger.warning("RAG retrieval failed (%s) — analysing without context", exc)
         rag_context = "Medical context unavailable."
 
-    prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights)
+    prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights, question=question)
+
+    # ── System message & token budget depend on mode ──────────────────────
+    is_report = _is_report_request(question)
+
+    if is_report:
+        system_msg = (
+            "You are a pediatric nutrition assistant. "
+            "Analyse the data and produce a structured report. "
+            "Be factual and precise. Use the WHO/SFP references when relevant. "
+            "Keep each section short — no filler, no exaggeration."
+        )
+        max_tok = MAX_TOKENS
+    else:
+        system_msg = (
+            "You are a pediatric nutrition assistant helping a parent. "
+            "Answer in 2-4 short sentences. Be warm but factual. "
+            "No headers, no bullet lists, no emojis, no markdown formatting. "
+            "Just a clear, direct answer. Cite a number when relevant. "
+            "If something is concerning, say so plainly without dramatising."
+        )
+        max_tok = MAX_TOKENS_CONVERSATIONAL
 
     client = anthropic.Anthropic()
     try:
         message = client.messages.create(
             model=CLAUDE_MODEL,
-            max_tokens=MAX_TOKENS,
+            max_tokens=max_tok,
+            system=system_msg,
             messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.BadRequestError as exc:

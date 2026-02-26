@@ -65,6 +65,7 @@ def render():
                         baby_id=baby["id"],
                         start=start_dt,
                         end=end_dt,
+                        question=user_input,
                     )
 
                     response = result["analysis"]

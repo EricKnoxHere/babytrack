@@ -148,16 +148,20 @@ def get_analysis(
     baby_id: int,
     start: Optional[datetime] = None,
     end: Optional[datetime] = None,
+    question: Optional[str] = None,
 ) -> dict:
     """
     Request an AI analysis for a datetime window.
     Defaults to today 00:00 → now (partial day) if no range given.
+    Pass question to get a conversational answer instead of a full report.
     """
     params: dict = {}
     if start:
         params["start"] = start.isoformat()
     if end:
         params["end"] = end.isoformat()
+    if question:
+        params["question"] = question
     return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
 
 

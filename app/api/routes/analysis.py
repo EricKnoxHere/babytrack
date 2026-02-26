@@ -60,6 +60,10 @@ async def analyze_baby_feedings(
         None,
         description="Window end (ISO datetime). Default: now.",
     ),
+    question: Optional[str] = Query(
+        None,
+        description="Parent's free-text question. When provided, Claude gives a short conversational answer instead of a full report.",
+    ),
 ) -> AnalysisResponse:
     """
     Analyse feedings in a freely defined datetime window.
@@ -145,6 +149,7 @@ async def analyze_baby_feedings(
             ctx=ctx,
             index=rag_index,
             weights=weights or None,
+            question=question,
         ),
     )
 
