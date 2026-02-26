@@ -58,7 +58,7 @@ html, body, [class*="css"] {
 /* ── Mobile optimizations ── */
 @media (max-width: 768px) {
     .block-container { padding: 0.5rem 1rem !important; }
-    [data-testid="stMainBlockContainer"] { margin-top: 0.5rem; }
+    [data-testid="stMainBlockContainer"] { margin-top: 1rem; }
     [data-testid="metric-container"] { padding: 10px; }
 }
 </style>
