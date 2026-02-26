@@ -40,8 +40,9 @@ html, body, [class*="css"] {
 }
 [data-testid="stSidebar"] { background: #fafbfc; }
 .block-container { padding-top: 1rem; }
-/* Hide Streamlit top bar so content starts at the very top */
-[data-testid="stHeader"] { display: none !important; }
+/* Hide Streamlit deploy/settings toolbar but keep hamburger menu for mobile */
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stHeader"] { background: transparent !important; }
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
 /* Prevent chat messages from overflowing */
