@@ -70,6 +70,8 @@ def _summarize_feedings(feedings: list[Feeding]) -> str:
     if not feedings:
         return "No feedings recorded for this period."
 
+    from collections import Counter
+
     total_ml = sum(f.quantity_ml for f in feedings)
     count = len(feedings)
     types = {f.feeding_type for f in feedings}
@@ -79,6 +81,17 @@ def _summarize_feedings(feedings: list[Feeding]) -> str:
         frozenset({"bottle", "breastfeeding"}): "mixed (bottle + breastfeeding)",
     }.get(frozenset(types), ", ".join(types))
 
+    # Per-day stats — only from days that actually have entries
+    daily_counts: Counter = Counter()
+    daily_volumes: Counter = Counter()
+    for f in feedings:
+        day = f.fed_at.date().isoformat()
+        daily_counts[day] += 1
+        daily_volumes[day] += f.quantity_ml
+    days_with_data = len(daily_counts)
+    avg_feeds_per_day = count / days_with_data if days_with_data else 0
+    avg_ml_per_day = total_ml / days_with_data if days_with_data else 0
+
     lines = [
         f"- {f.fed_at.strftime('%d/%m %H:%M')} : {f.quantity_ml} ml ({f.feeding_type})"
         + (f" — note: {f.notes}" if f.notes else "")
@@ -86,7 +99,9 @@ def _summarize_feedings(feedings: list[Feeding]) -> str:
     ]
 
     return (
-        f"Number of feedings: {count}\n"
+        f"Number of feedings: {count} over {days_with_data} days with recorded data\n"
+        f"Average: {avg_feeds_per_day:.1f} feeds/day, {avg_ml_per_day:.0f} ml/day "
+        f"(computed from days with entries only)\n"
         f"Total volume: {total_ml} ml\n"
         f"Feeding type: {type_label}\n"
         f"Chronological detail:\n" + "\n".join(lines)
