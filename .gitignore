@@ -8,3 +8,4 @@ data/*.db
 .env
 RAG_PROJECT_CONTEXT.md
 logs.txt
+/screenshots/

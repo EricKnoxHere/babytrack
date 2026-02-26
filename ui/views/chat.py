@@ -96,7 +96,7 @@ def render():
 
 def _parse_intent(text: str) -> tuple:
     """Parse user message to determine analysis time window.
-    
+
     Returns (start_dt, end_dt, label).
     Defaults to last 7 days for free-form questions.
     """
