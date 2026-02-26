@@ -185,3 +185,42 @@ def render():
             st.caption(f"{latest} g  ·  {sign}{gain} g since first measurement")
         else:
             st.caption(f"Current: {latest} g")
+
+    # ── Previous AI reports ──────────────────────────────────────────────────
+
+    st.markdown("---")
+    st.markdown("#### 📝 Previous AI reports")
+
+    try:
+        reports = api.list_analysis_history(baby["id"], limit=10)
+    except Exception:
+        reports = []
+
+    if not reports:
+        st.caption("No AI reports yet. Use the Chat to generate your first analysis.")
+    else:
+        for report in reports:
+            report_id = report.get("id")
+            created = report.get("created_at", "")
+            try:
+                dt_label = datetime.fromisoformat(created).strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                dt_label = created[:16] if len(created) >= 16 else created
+
+            period_info = report.get("period", "")
+            summary = report.get("summary", "Analysis report")
+
+            with st.expander(f"📄 {dt_label}  —  {summary[:80]}"):
+                # Lazy-load full report on expand
+                try:
+                    full = api.get_analysis_report(baby["id"], report_id)
+                    st.markdown(full.get("analysis", full.get("content", "No content available.")))
+                except Exception as e:
+                    st.error(f"Could not load report: {e}")
+
+                if st.button("🗑️ Delete", key=f"del_report_{report_id}"):
+                    try:
+                        api.delete_analysis_report(baby["id"], report_id)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
