@@ -35,7 +35,7 @@ def render():
     # ── Dropdown to reopen past conversations ────────────────────────────
 
     def _conv_label(idx: int) -> str:
-        """Format dropdown label: title · date."""
+        """Format dropdown label: date — title."""
         if idx == 0:
             return "— Conversations précédentes —"
         c = conversations[idx - 1]
@@ -43,10 +43,10 @@ def render():
         ts = c.get("updated_at") or c.get("created_at", "")
         try:
             dt = datetime.fromisoformat(ts)
-            date_str = dt.strftime("%d/%m %H:%M")
+            date_str = dt.strftime("%d/%m %H:%M:%S")
         except Exception:
             date_str = ""
-        return f"{title}  ·  {date_str}" if date_str else title
+        return f"{date_str}  —  {title}" if date_str else title
 
     selected_idx = st.selectbox(
         "Conversations",
