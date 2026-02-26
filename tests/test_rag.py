@@ -17,10 +17,11 @@ import pytest
 from llama_index.core.embeddings import MockEmbedding
 
 from app.models.baby import Baby
+from app.models.diaper import Diaper
 from app.models.feeding import Feeding
 from app.rag.indexer import build_index, load_index
 from app.rag.retriever import format_context, retrieve_context
-from app.rag.analyzer import AnalysisContext, analyze_feedings, _summarize_feedings, _extract_contextual_events
+from app.rag.analyzer import AnalysisContext, analyze_feedings, _summarize_feedings, _summarize_diapers, _extract_contextual_events
 from app.models.weight import Weight
 
 DOCS_DIR = Path("data/docs")
@@ -239,6 +240,107 @@ def test_extract_contextual_events_chronological():
     assert result.index("morning checkup") < result.index("late feed")
 
 
+# ─── Diaper summary tests ────────────────────────────────────────────────────
+
+@pytest.fixture
+def sample_diapers() -> list[Diaper]:
+    return [
+        Diaper(id=1, baby_id=1, changed_at=datetime(2026, 2, 23, 7, 0),
+               has_pee=True, has_poop=False, notes=None,
+               created_at=datetime(2026, 2, 23, 7, 0)),
+        Diaper(id=2, baby_id=1, changed_at=datetime(2026, 2, 23, 10, 0),
+               has_pee=True, has_poop=True, notes="dark green",
+               created_at=datetime(2026, 2, 23, 10, 0)),
+        Diaper(id=3, baby_id=1, changed_at=datetime(2026, 2, 23, 14, 0),
+               has_pee=True, has_poop=False, notes=None,
+               created_at=datetime(2026, 2, 23, 14, 0)),
+        Diaper(id=4, baby_id=1, changed_at=datetime(2026, 2, 24, 8, 0),
+               has_pee=True, has_poop=True, notes=None,
+               created_at=datetime(2026, 2, 24, 8, 0)),
+    ]
+
+
+def test_summarize_diapers_empty():
+    assert _summarize_diapers([]) == ""
+
+
+def test_summarize_diapers_total_count(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    assert "4" in result  # total diaper changes
+
+
+def test_summarize_diapers_pee_count(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    assert "Pee: 4" in result
+
+
+def test_summarize_diapers_poop_count(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    assert "Poop: 2" in result
+
+
+def test_summarize_diapers_per_day(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    assert "2 days" in result
+
+
+def test_summarize_diapers_chronological(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    lines = [l for l in result.split("\n") if l.startswith("- ")]
+    assert len(lines) == 4
+    # First line should be the earliest
+    assert "23/02" in lines[0]
+
+
+def test_summarize_diapers_notes(sample_diapers):
+    result = _summarize_diapers(sample_diapers)
+    assert "dark green" in result
+
+
+# ─── Contextual events with diapers ──────────────────────────────────────────
+
+def test_extract_contextual_events_diaper_notes():
+    """Diaper notes appear in the events log."""
+    diapers = [
+        Diaper(id=1, baby_id=1, changed_at=datetime(2026, 2, 23, 9),
+               has_pee=True, has_poop=True, notes="very watery stool",
+               created_at=datetime(2026, 2, 23, 9)),
+    ]
+    result = _extract_contextual_events([], [], diapers)
+    assert "watery stool" in result
+    assert "[diaper]" in result
+
+
+def test_extract_contextual_events_diaper_no_notes():
+    """Diapers without notes don't produce events."""
+    diapers = [
+        Diaper(id=1, baby_id=1, changed_at=datetime(2026, 2, 23, 9),
+               has_pee=True, has_poop=False, notes=None,
+               created_at=datetime(2026, 2, 23, 9)),
+    ]
+    result = _extract_contextual_events([], [], diapers)
+    assert result == ""
+
+
+def test_extract_contextual_events_mixed_with_diapers():
+    """Feedings + weights + diapers are combined chronologically."""
+    feedings = [
+        Feeding(id=1, baby_id=1, fed_at=datetime(2026, 2, 23, 12), quantity_ml=80,
+                feeding_type="bottle", notes="good appetite",
+                created_at=datetime(2026, 2, 23, 12)),
+    ]
+    diapers = [
+        Diaper(id=1, baby_id=1, changed_at=datetime(2026, 2, 23, 8),
+               has_pee=True, has_poop=True, notes="explosive poop",
+               created_at=datetime(2026, 2, 23, 8)),
+    ]
+    result = _extract_contextual_events(feedings, [], diapers)
+    assert "explosive poop" in result
+    assert "good appetite" in result
+    # diaper at 08:00 should appear before feeding at 12:00
+    assert result.index("explosive poop") < result.index("good appetite")
+
+
 # ─── Analyzer tests (mock Anthropic) ─────────────────────────────────────────
 
 def _mock_claude_response(text: str = "### ✅ All looks good."):
@@ -335,3 +437,60 @@ def test_analyze_feedings_rag_failure_graceful(sample_baby, sample_feedings):
         analysis_text, sources = analyze_feedings(baby=sample_baby, feedings=sample_feedings, ctx=ctx)
     assert isinstance(analysis_text, str)
     assert isinstance(sources, list)
+
+
+def test_analyze_feedings_with_diapers(sample_baby, sample_feedings, sample_diapers, index):
+    """analyze_feedings accepts diapers parameter and includes diaper data in prompt."""
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=7,
+        baseline_volume_ml=630,
+        baseline_label="prev day",
+    )
+    captured = []
+
+    def capture(**kwargs):
+        captured.append(kwargs["messages"][0]["content"])
+        return _mock_claude_response()
+
+    with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
+        mock_cls.return_value.messages.create.side_effect = capture
+        analysis_text, sources = analyze_feedings(
+            baby=sample_baby,
+            feedings=sample_feedings,
+            ctx=ctx,
+            index=index,
+            diapers=sample_diapers,
+        )
+
+    assert isinstance(analysis_text, str)
+    # The prompt should contain diaper data
+    assert captured and "Diaper" in captured[0]
+
+
+def test_analyze_feedings_without_diapers(sample_baby, sample_feedings, index):
+    """analyze_feedings works fine with diapers=None (backward compat)."""
+    ctx = AnalysisContext(
+        start=datetime(2026, 2, 23, 0, 0),
+        end=datetime(2026, 2, 23, 14, 0),
+        is_partial=True,
+        hours_elapsed=14,
+        feedings_expected=8,
+        baseline_count=7,
+        baseline_volume_ml=630,
+        baseline_label="prev day",
+    )
+    with patch("app.rag.analyzer.anthropic.Anthropic") as mock_cls:
+        mock_cls.return_value.messages.create.return_value = _mock_claude_response()
+        analysis_text, sources = analyze_feedings(
+            baby=sample_baby,
+            feedings=sample_feedings,
+            ctx=ctx,
+            index=index,
+            diapers=None,
+        )
+    assert isinstance(analysis_text, str)

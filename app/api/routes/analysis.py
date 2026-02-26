@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from app.api.dependencies import DbDep
 from app.models.report import AnalysisReport, AnalysisReportSummary
-from app.services import baby_service, feeding_service, report_service, weight_service
+from app.services import baby_service, diaper_service, feeding_service, report_service, weight_service
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +151,9 @@ async def analyze_baby_feedings(
         db, baby_id, (end_dt - timedelta(days=30)).date(), end_dt.date()
     )
 
+    # Diapers in the window for hydration context
+    diapers = await diaper_service.get_diapers_by_datetime_range(db, baby_id, start_dt, end_dt)
+
     rag_index = getattr(request.app.state, "rag_index", None)
     period_label = _make_period_label(start_dt, end_dt, is_partial)
 
@@ -164,6 +167,7 @@ async def analyze_baby_feedings(
             ctx=ctx,
             index=rag_index,
             weights=weights or None,
+            diapers=diapers or None,
             question=question,
         ),
     )
@@ -255,6 +259,9 @@ async def chat_with_history(
         db, baby_id, (end_dt - timedelta(days=30)).date(), end_dt.date()
     )
 
+    # Diapers in the window for hydration context
+    diapers = await diaper_service.get_diapers_by_datetime_range(db, baby_id, start_dt, end_dt)
+
     rag_index = getattr(request.app.state, "rag_index", None)
     period_label = _make_period_label(start_dt, end_dt, is_partial)
 
@@ -271,6 +278,7 @@ async def chat_with_history(
             ctx=ctx,
             index=rag_index,
             weights=weights or None,
+            diapers=diapers or None,
             question=body.question,
             chat_history=history,
         ),

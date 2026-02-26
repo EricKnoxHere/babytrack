@@ -11,6 +11,7 @@ import anthropic
 from llama_index.core import VectorStoreIndex
 
 from app.models.baby import Baby
+from app.models.diaper import Diaper
 from app.models.feeding import Feeding
 from app.models.weight import Weight
 from .retriever import format_context, retrieve_context
@@ -120,9 +121,43 @@ def _summarize_weights(weights: list[Weight]) -> str:
     return "\n".join(lines)
 
 
+def _summarize_diapers(diapers: list[Diaper]) -> str:
+    """Builds a short diaper summary for the prompt."""
+    if not diapers:
+        return ""
+    from collections import Counter
+
+    pee_count = sum(1 for d in diapers if d.has_pee)
+    poop_count = sum(1 for d in diapers if d.has_poop)
+    total = len(diapers)
+
+    # Per-day stats
+    daily_counts: Counter = Counter()
+    for d in diapers:
+        daily_counts[d.changed_at.date().isoformat()] += 1
+    days_with_data = len(daily_counts)
+    avg_per_day = total / days_with_data if days_with_data else 0
+
+    lines = [
+        f"- {d.changed_at.strftime('%d/%m %H:%M')} : "
+        + ("pee " if d.has_pee else "")
+        + ("poop " if d.has_poop else "")
+        + (f"— note: {d.notes}" if d.notes else "")
+        for d in sorted(diapers, key=lambda x: x.changed_at)
+    ]
+
+    return (
+        f"Total diaper changes: {total} over {days_with_data} days\n"
+        f"Pee: {pee_count}, Poop: {poop_count}\n"
+        f"Average: {avg_per_day:.1f} changes/day\n"
+        f"Chronological detail:\n" + "\n".join(lines)
+    )
+
+
 def _extract_contextual_events(
     feedings: list[Feeding],
     weights: list[Weight],
+    diapers: list[Diaper] | None = None,
 ) -> str:
     """Collects all non-empty notes into a chronological event log."""
     events: list[tuple[datetime, str, str]] = []
@@ -133,6 +168,10 @@ def _extract_contextual_events(
     for w in weights:
         if w.notes and w.notes.strip():
             events.append((w.measured_at, "weight", w.notes.strip()))
+    if diapers:
+        for d in diapers:
+            if d.notes and d.notes.strip():
+                events.append((d.changed_at, "diaper", d.notes.strip()))
 
     if not events:
         return ""
@@ -152,6 +191,7 @@ def _build_prompt(
     rag_context: str,
     ctx: AnalysisContext,
     weights: list[Weight] | None = None,
+    diapers: list[Diaper] | None = None,
     question: str | None = None,
 ) -> str:
     feeding_summary = _summarize_feedings(feedings)
@@ -188,8 +228,13 @@ def _build_prompt(
 Baseline: {baseline_note}
 """
 
+    # ── Diaper section ────────────────────────────────────────────────────────
+    diaper_section = ""
+    if diapers:
+        diaper_section = f"\n## Diaper changes\n{_summarize_diapers(diapers)}\n"
+
     # ── Contextual events ─────────────────────────────────────────────────────
-    contextual_events = _extract_contextual_events(feedings, weights or [])
+    contextual_events = _extract_contextual_events(feedings, weights or [], diapers)
     context_section = ""
     if contextual_events:
         context_section = f"""## Parent notes
@@ -216,6 +261,7 @@ Baseline: {baseline_note}
 - Birth weight: {baby.birth_weight_grams} g
 - {norms_note}
 {weight_section}
+{diaper_section}
 {temporal_section}
 {context_section}## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
 {feeding_summary}"""
@@ -225,7 +271,8 @@ Baseline: {baseline_note}
 1. Extract the SFP recommended ranges for this baby's age: feeds/day, ml/feed, total ml/day.
 2. Compare the baby's actual data against those reference ranges.
 3. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
-4. Do not state that data is "appropriate" or "on track" without citing the specific SFP reference range that supports it."""
+4. Do not state that data is "appropriate" or "on track" without citing the specific SFP reference range that supports it.
+5. If diaper data is provided, assess hydration: SFP recommends 5-8 wet nappies/day after day 5. Fewer than 6 wet nappies/day is a warning sign."""
 
     # ── Report mode: structured 4-section analysis ────────────────────────
     if _is_report_request(question):
@@ -261,6 +308,7 @@ def analyze_feedings(
     index: Optional[VectorStoreIndex] = None,
     index_dir: Optional[Path] = None,
     weights: list[Weight] | None = None,
+    diapers: list[Diaper] | None = None,
     question: str | None = None,
     chat_history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
@@ -318,7 +366,7 @@ def analyze_feedings(
         logger.warning("RAG retrieval failed (%s) — analysing without context", exc)
         rag_context = "Medical context unavailable."
 
-    prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights, question=question)
+    prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights, diapers=diapers, question=question)
 
     # ── Build messages array (with optional conversation history) ────────
     messages: list[dict] = []
