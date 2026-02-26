@@ -42,7 +42,14 @@ html, body, [class*="css"] {
 .block-container { padding-top: 1rem; }
 /* Hide Streamlit deploy/settings toolbar but keep hamburger menu for mobile */
 [data-testid="stToolbar"] { display: none !important; }
-[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stHeader"] {
+    background: transparent !important;
+    pointer-events: none !important;
+}
+[data-testid="stHeader"] button,
+[data-testid="collapsedControl"] {
+    pointer-events: auto !important;
+}
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
 /* Prevent chat messages from overflowing */
