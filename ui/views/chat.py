@@ -101,7 +101,9 @@ def render():
                     suggestion_clicked = sug
 
         if suggestion_clicked:
-            _handle_user_message(baby, suggestion_clicked)
+            st.session_state.chat_messages.append(
+                {"role": "user", "content": suggestion_clicked}
+            )
             st.rerun()
 
     # ── Display conversation ─────────────────────────────────────────────────
@@ -111,19 +113,29 @@ def render():
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
+        # If last message is from user, generate assistant response with spinner
+        if (
+            st.session_state.chat_messages
+            and st.session_state.chat_messages[-1]["role"] == "user"
+        ):
+            with st.chat_message("assistant"):
+                with st.spinner("Réflexion en cours…"):
+                    _generate_response(baby)
+            st.rerun()
+
     # ── Chat input ───────────────────────────────────────────────────────────
 
     user_input = st.chat_input(f"Question sur {name}...")
 
     if user_input:
-        _handle_user_message(baby, user_input)
+        st.session_state.chat_messages.append({"role": "user", "content": user_input})
         st.rerun()
 
 
-def _handle_user_message(baby: dict, user_input: str):
-    """Process a user message: add to history, call API, save conversation."""
-    # Add user message
-    st.session_state.chat_messages.append({"role": "user", "content": user_input})
+def _generate_response(baby: dict):
+    """Call the API and append the assistant response. User message is already in state."""
+    messages = st.session_state.chat_messages
+    user_input = messages[-1]["content"]
 
     # Build time window from intent
     start_dt, end_dt = _parse_time_window(user_input)
@@ -131,7 +143,7 @@ def _handle_user_message(baby: dict, user_input: str):
     # Build history for API (exclude current msg)
     history_for_api = [
         {"role": m["role"], "content": m["content"]}
-        for m in st.session_state.chat_messages[:-1]
+        for m in messages[:-1]
         if m["role"] in ("user", "assistant")
     ]
 
@@ -152,14 +164,10 @@ def _handle_user_message(baby: dict, user_input: str):
             source_names = sorted(set(s["source"] for s in sources))
             response += "\n\n---\n_📚 Sources: " + ", ".join(source_names) + "_"
 
-        st.session_state.chat_messages.append(
-            {"role": "assistant", "content": response}
-        )
+        messages.append({"role": "assistant", "content": response})
     except Exception as e:
         error_msg = f"Désolé, une erreur est survenue : {e}"
-        st.session_state.chat_messages.append(
-            {"role": "assistant", "content": error_msg}
-        )
+        messages.append({"role": "assistant", "content": error_msg})
 
     # Auto-save conversation
     _auto_save(baby)
