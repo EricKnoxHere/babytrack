@@ -12,7 +12,10 @@ load_dotenv()  # load .env before anything reads os.getenv()
 
 from fastapi import FastAPI
 
-from app.api.routes import analysis_router, babies_router, feedings_router, health_router, weights_router
+from app.api.routes import (
+    analysis_router, babies_router, conversations_router,
+    diapers_router, feedings_router, health_router, weights_router,
+)
 from app.services.database import create_tables
 
 # Do NOT import RAG at startup (sentence-transformers + torch = 600MB+)
@@ -58,4 +61,6 @@ app.include_router(health_router)
 app.include_router(babies_router)
 app.include_router(feedings_router)
 app.include_router(weights_router)
+app.include_router(diapers_router)
 app.include_router(analysis_router)
+app.include_router(conversations_router)

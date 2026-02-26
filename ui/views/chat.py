@@ -1,4 +1,4 @@
-"""Chat — Conversational interface with memory."""
+"""Chat — Conversational interface with memory and persistence."""
 
 import streamlit as st
 from datetime import datetime, timedelta
@@ -10,15 +10,92 @@ def render():
     if not baby:
         return
 
+    name = baby["name"]
+
     # ── Init chat state ──────────────────────────────────────────────────────
 
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
+    if "chat_conv_id" not in st.session_state:
+        st.session_state.chat_conv_id = None
 
     # Reset history when baby changes
     if st.session_state.get("_chat_baby_id") != baby["id"]:
         st.session_state.chat_messages = []
+        st.session_state.chat_conv_id = None
         st.session_state._chat_baby_id = baby["id"]
+
+    # ── Sidebar: conversation history ────────────────────────────────────────
+
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("**💬 Conversations**")
+
+        if st.button("➕ New chat", use_container_width=True, key="new_chat_btn"):
+            _save_current_if_needed(baby)
+            st.session_state.chat_messages = []
+            st.session_state.chat_conv_id = None
+            st.rerun()
+
+        try:
+            conversations = api.list_conversations(baby["id"], limit=15)
+        except Exception:
+            conversations = []
+
+        for conv in conversations:
+            col_title, col_del = st.columns([5, 1])
+            with col_title:
+                label = conv["title"][:35]
+                is_active = st.session_state.chat_conv_id == conv["id"]
+                btn_type = "primary" if is_active else "secondary"
+                if st.button(
+                    f"{'▸ ' if is_active else ''}{label}",
+                    key=f"conv_{conv['id']}",
+                    use_container_width=True,
+                    type=btn_type,
+                ):
+                    _save_current_if_needed(baby)
+                    _load_conversation(conv["id"])
+                    st.rerun()
+            with col_del:
+                if st.button("🗑️", key=f"del_conv_{conv['id']}", help="Delete"):
+                    try:
+                        api.delete_conversation(conv["id"])
+                        if st.session_state.chat_conv_id == conv["id"]:
+                            st.session_state.chat_messages = []
+                            st.session_state.chat_conv_id = None
+                        st.rerun()
+                    except Exception:
+                        pass
+
+    # ── Prompt suggestions (when empty) ──────────────────────────────────────
+
+    if not st.session_state.chat_messages:
+        st.markdown("## 💬 Chat")
+        st.caption(f"Ask anything about {name}'s feeding, weight, diapers, or health.")
+
+        suggestions = [
+            f"How is {name} feeding today?",
+            "Full review of yesterday",
+            "Weekly feeding trends",
+            f"Is {name} eating enough?",
+            f"Any concerns about {name}'s growth?",
+        ]
+
+        # Spacer to push suggestions toward the bottom
+        st.markdown("<div style='flex:1;min-height:200px'></div>", unsafe_allow_html=True)
+
+        # Stack suggestions vertically, aligned right
+        suggestion_clicked = None
+        for idx, sug in enumerate(suggestions):
+            col_spacer, col_btn = st.columns([3, 2])
+            with col_btn:
+                if st.button(sug, key=f"sug_{idx}", use_container_width=True):
+                    suggestion_clicked = sug
+
+        if suggestion_clicked:
+            _handle_user_message(baby, suggestion_clicked)
+            st.rerun()
 
     # ── Display conversation ─────────────────────────────────────────────────
 
@@ -28,62 +105,96 @@ def render():
 
     # ── Chat input ───────────────────────────────────────────────────────────
 
-    user_input = st.chat_input(f"Ask about {baby['name']}...")
+    user_input = st.chat_input(f"Ask about {name}...")
 
     if user_input:
-        # Show user message immediately
-        st.session_state.chat_messages.append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.markdown(user_input)
+        _handle_user_message(baby, user_input)
+        st.rerun()
 
-        # Build time window from intent
-        start_dt, end_dt = _parse_time_window(user_input)
 
-        # Build history for API (only user/assistant, exclude current msg)
-        history_for_api = [
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.chat_messages[:-1]
-            if m["role"] in ("user", "assistant")
-        ]
+def _handle_user_message(baby: dict, user_input: str):
+    """Process a user message: add to history, call API, save conversation."""
+    # Add user message
+    st.session_state.chat_messages.append({"role": "user", "content": user_input})
 
-        # Call API with history
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                try:
-                    result = api.chat(
-                        baby_id=baby["id"],
-                        question=user_input,
-                        start=start_dt,
-                        end=end_dt,
-                        chat_history=history_for_api,
-                    )
+    # Build time window from intent
+    start_dt, end_dt = _parse_time_window(user_input)
 
-                    response = result["analysis"]
+    # Build history for API (exclude current msg)
+    history_for_api = [
+        {"role": m["role"], "content": m["content"]}
+        for m in st.session_state.chat_messages[:-1]
+        if m["role"] in ("user", "assistant")
+    ]
 
-                    # Append source footer
-                    sources = result.get("sources", [])
-                    if sources:
-                        source_names = sorted(set(s["source"] for s in sources))
-                        response += "\n\n---\n_📚 Sources: " + ", ".join(source_names) + "_"
+    # Call API
+    try:
+        result = api.chat(
+            baby_id=baby["id"],
+            question=user_input,
+            start=start_dt,
+            end=end_dt,
+            chat_history=history_for_api,
+        )
+        response = result["analysis"]
 
-                    st.markdown(response)
-                    st.session_state.chat_messages.append(
-                        {"role": "assistant", "content": response}
-                    )
+        # Append source footer
+        sources = result.get("sources", [])
+        if sources:
+            source_names = sorted(set(s["source"] for s in sources))
+            response += "\n\n---\n_📚 Sources: " + ", ".join(source_names) + "_"
 
-                except Exception as e:
-                    error_msg = f"Sorry, something went wrong: {e}"
-                    st.error(error_msg)
-                    st.session_state.chat_messages.append(
-                        {"role": "assistant", "content": error_msg}
-                    )
+        st.session_state.chat_messages.append(
+            {"role": "assistant", "content": response}
+        )
+    except Exception as e:
+        error_msg = f"Sorry, something went wrong: {e}"
+        st.session_state.chat_messages.append(
+            {"role": "assistant", "content": error_msg}
+        )
 
-    # ── Clear chat ───────────────────────────────────────────────────────────
+    # Auto-save conversation
+    _auto_save(baby)
 
+
+def _auto_save(baby: dict):
+    """Save or update the current conversation."""
+    messages = st.session_state.chat_messages
+    if not messages:
+        return
+
+    # Generate title from first user message
+    first_user = next(
+        (m["content"] for m in messages if m["role"] == "user"), "New chat"
+    )
+    title = first_user[:60]
+
+    conv_id = st.session_state.chat_conv_id
+    try:
+        if conv_id:
+            api.update_conversation(conv_id, title=title, messages=messages)
+        else:
+            conv = api.save_conversation(baby["id"], title, messages)
+            st.session_state.chat_conv_id = conv["id"]
+    except Exception:
+        pass  # Don't block chat on save failure
+
+
+def _save_current_if_needed(baby: dict):
+    """Save current conversation before switching."""
     if st.session_state.chat_messages:
-        if st.button("📝 Clear conversation", key="clear_chat"):
-            st.session_state.chat_messages = []
-            st.rerun()
+        _auto_save(baby)
+
+
+def _load_conversation(conversation_id: int):
+    """Load a conversation from the API into session state."""
+    try:
+        conv = api.get_conversation(conversation_id)
+        st.session_state.chat_messages = conv.get("messages", [])
+        st.session_state.chat_conv_id = conv["id"]
+    except Exception:
+        st.session_state.chat_messages = []
+        st.session_state.chat_conv_id = None
 
 
 # ── Time window parser ───────────────────────────────────────────────────────
