@@ -25,71 +25,77 @@ def render():
         st.session_state.chat_conv_id = None
         st.session_state._chat_baby_id = baby["id"]
 
-    # ── Sidebar: conversation history ────────────────────────────────────────
+    # ── Load past conversations ──────────────────────────────────────────────
 
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("**💬 Conversations**")
+    try:
+        conversations = api.list_conversations(baby["id"], limit=20)
+    except Exception:
+        conversations = []
 
-        if st.button("➕ Nouvelle conversation", use_container_width=True, key="new_chat_btn"):
+    # ── Top bar: dropdown to reopen + new chat button ────────────────────────
+
+    col_conv, col_new = st.columns([4, 1])
+
+    with col_conv:
+        conv_labels = ["— Conversations précédentes —"] + [
+            c["title"][:50] for c in conversations
+        ]
+        selected_idx = st.selectbox(
+            "Conversations",
+            range(len(conv_labels)),
+            format_func=lambda i: conv_labels[i],
+            index=0,
+            key="chat_conv_picker",
+            label_visibility="collapsed",
+        )
+        if selected_idx > 0:
+            target = conversations[selected_idx - 1]
+            if st.session_state.chat_conv_id != target["id"]:
+                _save_current_if_needed(baby)
+                _load_conversation(target["id"])
+                st.rerun()
+
+    with col_new:
+        if st.button("➕ Nouveau", use_container_width=True, key="new_chat_btn"):
             _save_current_if_needed(baby)
             st.session_state.chat_messages = []
             st.session_state.chat_conv_id = None
             st.rerun()
 
-        try:
-            conversations = api.list_conversations(baby["id"], limit=15)
-        except Exception:
-            conversations = []
-
-        for conv in conversations:
-            col_title, col_del = st.columns([5, 1])
-            with col_title:
-                label = conv["title"][:35]
-                is_active = st.session_state.chat_conv_id == conv["id"]
-                btn_type = "primary" if is_active else "secondary"
-                if st.button(
-                    f"{'▸ ' if is_active else ''}{label}",
-                    key=f"conv_{conv['id']}",
-                    use_container_width=True,
-                    type=btn_type,
-                ):
-                    _save_current_if_needed(baby)
-                    _load_conversation(conv["id"])
-                    st.rerun()
-            with col_del:
-                if st.button("🗑️", key=f"del_conv_{conv['id']}", help="Supprimer"):
-                    try:
-                        api.delete_conversation(conv["id"])
-                        if st.session_state.chat_conv_id == conv["id"]:
-                            st.session_state.chat_messages = []
-                            st.session_state.chat_conv_id = None
-                        st.rerun()
-                    except Exception:
-                        pass
-
-    # ── Prompt suggestions (when empty) ──────────────────────────────────────
+    # ── Empty state: centered welcome + suggestion chips ─────────────────────
 
     if not st.session_state.chat_messages:
-        st.markdown("## 💬 Chat")
-        st.caption(f"Posez vos questions sur l'alimentation, le poids, les couches ou la santé de {name}.")
+        st.markdown(
+            "<div style='text-align:center;padding:60px 0 20px'>"
+            "<span style='font-size:2.5rem'>✨</span></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<h2 style='text-align:center;margin:0 0 8px'>"
+            f"Posez vos questions sur {name}</h2>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p style='text-align:center;color:#94a3b8;margin-bottom:40px'>"
+            "Alimentation, poids, couches, santé…</p>",
+            unsafe_allow_html=True,
+        )
 
         suggestions = [
             f"Comment {name} mange aujourd'hui ?",
             "Bilan complet d'hier",
-            "Tendances de la semaine",
             f"Est-ce que {name} mange assez ?",
-            f"Des préoccupations sur la croissance de {name} ?",
+            "Tendances de la semaine",
         ]
 
-        # Spacer to push suggestions toward the bottom
-        st.markdown("<div style='flex:1;min-height:200px'></div>", unsafe_allow_html=True)
+        # Spacer
+        st.markdown("<div style='min-height:120px'></div>", unsafe_allow_html=True)
 
-        # Stack suggestions vertically, aligned right
+        st.caption("Suggestions")
         suggestion_clicked = None
+        cols = st.columns(2)
         for idx, sug in enumerate(suggestions):
-            col_spacer, col_btn = st.columns([3, 2])
-            with col_btn:
+            with cols[idx % 2]:
                 if st.button(sug, key=f"sug_{idx}", use_container_width=True):
                     suggestion_clicked = sug
 
@@ -99,9 +105,23 @@ def render():
 
     # ── Display conversation ─────────────────────────────────────────────────
 
-    for msg in st.session_state.chat_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    else:
+        # Delete button for active conversation
+        if st.session_state.chat_conv_id:
+            _, col_del = st.columns([6, 1])
+            with col_del:
+                if st.button("🗑️", key="del_active_conv", help="Supprimer"):
+                    try:
+                        api.delete_conversation(st.session_state.chat_conv_id)
+                    except Exception:
+                        pass
+                    st.session_state.chat_messages = []
+                    st.session_state.chat_conv_id = None
+                    st.rerun()
+
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
     # ── Chat input ───────────────────────────────────────────────────────────
 
