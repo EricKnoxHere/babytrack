@@ -1,237 +1,157 @@
-"""Dashboard - Charts and past reports."""
+"""Dashboard — Charts, weight tracking, and past AI reports."""
 
 import streamlit as st
 import plotly.graph_objects as go
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from ui import api_client as api
 
 
 def render():
-    """Render the dashboard page."""
-    
     baby = st.session_state.get("selected_baby")
     if not baby:
-        st.error("No baby selected")
         return
-    
-    st.title(f"📊 Dashboard – {baby['name']}")
-    
-    # ──────────────────────────────────────────────────────────────────────────
-    # Time period selector
-    # ──────────────────────────────────────────────────────────────────────────
-    
-    col_period, col_end = st.columns([2, 1])
-    
-    with col_period:
-        period_opts = {
-            "7 days": 7,
-            "14 days": 14,
-            "30 days": 30,
-            "90 days": 90,
-            "All time": None,
-        }
-        selected_period = st.selectbox("Period", list(period_opts.keys()), key="dash_period")
-        days = period_opts[selected_period]
-    
-    with col_end:
-        end_date = st.date_input("Up to", value=date.today(), key="dash_end_date")
-    
-    if days:
-        start_date = end_date - timedelta(days=days - 1)
-    else:
-        start_date = date(2020, 1, 1)
-    
-    # ──────────────────────────────────────────────────────────────────────────
-    # Load data
-    # ──────────────────────────────────────────────────────────────────────────
-    
+
+    st.markdown(f"## 📊 Dashboard – {baby['name']}")
+
+    # ── Period selector ──────────────────────────────────────────────────────
+
+    col_p, col_d = st.columns([1, 1])
+    with col_p:
+        days = st.selectbox("Period", [7, 14, 30], format_func=lambda n: f"{n} days", key="d_period")
+    with col_d:
+        end_date = st.date_input("Up to", value=date.today(), key="d_end")
+
+    start_date = end_date - timedelta(days=days - 1)
+
+    # ── Load data ────────────────────────────────────────────────────────────
+
     try:
         feedings = api.get_feedings(baby["id"], start=start_date, end=end_date)
+    except Exception:
+        feedings = []
+
+    try:
         weights = api.get_weights(baby["id"])
-    except Exception as e:
-        st.error(f"Could not load data: {e}")
-        return
-    
+    except Exception:
+        weights = []
+
     if not feedings:
-        st.info("No feedings recorded for this period.")
+        st.info("No feedings for this period.")
+        _render_weight_section(baby, weights)
+        _render_reports_section(baby)
         return
-    
-    # Metrics
+
+    # ── Metrics ──────────────────────────────────────────────────────────────
+
     total_ml = sum(f["quantity_ml"] for f in feedings)
-    avg_per_day = total_ml / days if days else (total_ml / len(set(f["fed_at"][:10] for f in feedings)))
-    avg_per_feeding = total_ml / len(feedings)
-    
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("Total volume", f"{total_ml} ml")
-    m_col2.metric("Daily average", f"{avg_per_day:.0f} ml")
-    m_col3.metric("Per feeding", f"{avg_per_feeding:.0f} ml")
-    m_col4.metric("Feedings", len(feedings))
-    
-    st.divider()
-    
-    # ──────────────────────────────────────────────────────────────────────────
-    # Charts
-    # ──────────────────────────────────────────────────────────────────────────
-    
-    # Aggregate by day
-    from collections import defaultdict
-    daily = defaultdict(lambda: {"total_ml": 0, "count": 0})
+    avg_day = total_ml / days
+    avg_feed = total_ml / len(feedings)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total volume", f"{total_ml} ml")
+    c2.metric("Daily avg", f"{avg_day:.0f} ml")
+    c3.metric("Per feeding", f"{avg_feed:.0f} ml")
+
+    # ── Charts ───────────────────────────────────────────────────────────────
+
+    daily = defaultdict(lambda: {"ml": 0, "n": 0})
     for f in feedings:
-        day = f["fed_at"][:10]
-        daily[day]["total_ml"] += f["quantity_ml"]
-        daily[day]["count"] += 1
-    
-    day_range = [
-        (start_date + timedelta(days=i)).isoformat()
-        for i in range((end_date - start_date).days + 1)
-    ]
-    
-    vol_data = [daily[d]["total_ml"] for d in day_range]
-    count_data = [daily[d]["count"] for d in day_range]
-    
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        fig_vol = go.Figure(data=[
-            go.Bar(
-                x=day_range,
-                y=vol_data,
-                marker_color="#3b82f6",
-                text=vol_data,
-                textposition="outside",
-                name="Volume (ml)",
-            )
-        ])
-        fig_vol.update_layout(
-            title="Volume per day",
-            xaxis_title="Date",
-            yaxis_title="ml",
-            height=400,
-            showlegend=False,
-            margin=dict(t=50, b=30),
-        )
-        st.plotly_chart(fig_vol, use_container_width=True)
-    
-    with col_chart2:
-        fig_count = go.Figure(data=[
-            go.Bar(
-                x=day_range,
-                y=count_data,
-                marker_color="#10b981",
-                text=count_data,
-                textposition="outside",
-                name="Feedings",
-            )
-        ])
-        fig_count.update_layout(
-            title="Feedings per day",
-            xaxis_title="Date",
-            yaxis_title="Count",
-            height=400,
-            showlegend=False,
-            margin=dict(t=50, b=30),
-        )
-        st.plotly_chart(fig_count, use_container_width=True)
-    
-    # Feeding type breakdown
-    type_counts = {
-        "🍼 Bottle": sum(1 for f in feedings if f["feeding_type"] == "bottle"),
-        "🤱 Breastfeeding": sum(1 for f in feedings if f["feeding_type"] == "breastfeeding"),
-    }
-    
-    fig_pie = go.Figure(data=[
-        go.Pie(
-            labels=list(type_counts.keys()),
-            values=list(type_counts.values()),
-            marker_colors=["#3b82f6", "#f59e0b"],
-        )
-    ])
-    fig_pie.update_layout(
-        title="Feeding types",
-        height=400,
-        margin=dict(t=50, b=30),
-    )
-    
-    col_pie, col_recent = st.columns([1, 1.2])
-    
-    with col_pie:
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    with col_recent:
-        st.subheader("📋 Recent feedings")
-        recent = sorted(feedings, key=lambda x: x["fed_at"], reverse=True)[:8]
-        for f in recent:
-            time_str = datetime.fromisoformat(f["fed_at"]).strftime("%d/%m %H:%M")
-            icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
-            st.markdown(f"{icon} `{time_str}` **{f['quantity_ml']}ml**")
-            if f.get("notes"):
-                st.caption(f"_{f['notes']}_")
-    
-    # Weight curve
-    st.divider()
-    st.subheader("⚖️ Growth curve")
-    
+        d = f["fed_at"][:10]
+        daily[d]["ml"] += f["quantity_ml"]
+        daily[d]["n"] += 1
+
+    day_range = [(start_date + timedelta(days=i)).isoformat() for i in range(days)]
+    vols = [daily[d]["ml"] for d in day_range]
+    counts = [daily[d]["n"] for d in day_range]
+
+    col_v, col_c = st.columns(2)
+
+    with col_v:
+        fig = go.Figure(go.Bar(x=day_range, y=vols, marker_color="#3b82f6", text=vols, textposition="outside"))
+        fig.update_layout(title="Volume / day", xaxis_tickformat="%d/%m", height=350, margin=dict(t=40, b=20), showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_c:
+        fig = go.Figure(go.Bar(x=day_range, y=counts, marker_color="#10b981", text=counts, textposition="outside"))
+        fig.update_layout(title="Feedings / day", xaxis_tickformat="%d/%m", height=350, margin=dict(t=40, b=20), showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ── Weight section ───────────────────────────────────────────────────────
+
+    _render_weight_section(baby, weights)
+
+    # ── Past AI reports ──────────────────────────────────────────────────────
+
+    _render_reports_section(baby)
+
+
+# ── Weight sub-section ───────────────────────────────────────────────────────
+
+def _render_weight_section(baby: dict, weights: list):
+    st.markdown("---")
+    st.markdown("#### ⚖️ Weight")
+
+    # Log weight form
+    with st.expander("➕ Log weight", expanded=False):
+        col_l, col_r = st.columns(2)
+        with col_l:
+            w_date = st.date_input("Date", value=date.today(), key="w_date")
+            w_time = st.time_input("Time", value=datetime.now().time(), key="w_time")
+        with col_r:
+            w_g = st.number_input("Weight (g)", 500, 20000, 3200, step=50, key="w_g")
+        w_notes = st.text_input("Notes", key="w_notes", placeholder="e.g. pediatrician visit")
+
+        if st.button("✅ Save weight", use_container_width=True, type="primary", key="w_save"):
+            w_at = datetime.combine(w_date, w_time).isoformat()
+            try:
+                api.add_weight(baby["id"], w_at, int(w_g), w_notes or None)
+                st.success("Saved!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+    # Growth chart
     if weights:
         w_dates = [datetime.fromisoformat(w["measured_at"]).strftime("%d/%m") for w in weights]
-        w_values = [w["weight_g"] for w in weights]
-        
-        fig_growth = go.Figure(data=[
-            go.Scatter(
-                x=w_dates,
-                y=w_values,
-                mode="lines+markers",
-                line=dict(color="#3b82f6", width=3),
-                marker=dict(size=8),
-            )
-        ])
-        fig_growth.update_layout(
-            title="Weight over time",
-            xaxis_title="Date",
-            yaxis_title="Weight (g)",
-            height=400,
-            showlegend=False,
-            margin=dict(t=50, b=30),
-        )
-        st.plotly_chart(fig_growth, use_container_width=True)
-        
+        w_vals = [w["weight_g"] for w in weights]
+
+        fig = go.Figure(go.Scatter(x=w_dates, y=w_vals, mode="lines+markers",
+                                   line=dict(color="#3b82f6", width=3), marker=dict(size=7)))
+        fig.update_layout(title="Growth curve", height=300, margin=dict(t=40, b=20), showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
         if len(weights) >= 2:
             gain = weights[-1]["weight_g"] - weights[0]["weight_g"]
-            st.info(f"📈 Total gain: **+{gain}g** ({weights[0]['weight_g']}g → {weights[-1]['weight_g']}g)")
+            st.caption(f"📈 +{gain}g since first measurement")
     else:
-        st.info("No weight measurements yet. Log them in Home.")
-    
-    # ──────────────────────────────────────────────────────────────────────────
-    # Past AI reports
-    # ──────────────────────────────────────────────────────────────────────────
-    
-    st.divider()
-    st.subheader("🤖 Past AI analyses")
-    
+        st.caption("No weight data yet.")
+
+
+# ── Reports sub-section ──────────────────────────────────────────────────────
+
+def _render_reports_section(baby: dict):
+    st.markdown("---")
+    st.markdown("#### 🤖 Past AI analyses")
+
     try:
         reports = api.list_analysis_history(baby["id"], limit=10)
     except Exception:
         reports = []
-    
+
     if not reports:
-        st.info("No analyses saved yet. Go to the Chat page to create one.")
-    else:
-        for report in reports:
-            created = datetime.fromisoformat(report["created_at"])
-            badge = "🕐" if report.get("is_partial") else "✅"
-            label = f"{badge} {report['period_label']} · {created.strftime('%d/%m %H:%M')}"
-            
-            with st.expander(label):
-                try:
-                    full = api.get_analysis_report(baby["id"], report["id"])
-                    st.markdown(full["analysis"])
-                    if full.get("sources"):
-                        st.caption("📚 Sources: " + ", ".join(s["source"] for s in full["sources"]))
-                except Exception as e:
-                    st.error(f"Could not load: {e}")
-                
-                if st.button("🗑️", key=f"del_report_{report['id']}", help="Delete"):
-                    try:
-                        api.delete_analysis_report(baby["id"], report["id"])
-                        st.rerun()
-                    except Exception:
-                        pass
+        st.caption("No reports yet — use the Chat page to analyze.")
+        return
+
+    for r in reports:
+        created = datetime.fromisoformat(r["created_at"]).strftime("%d/%m %H:%M")
+        badge = "🕐" if r.get("is_partial") else "✅"
+
+        with st.expander(f"{badge} {r['period_label']}  ·  {created}"):
+            try:
+                full = api.get_analysis_report(baby["id"], r["id"])
+                st.markdown(full["analysis"])
+                if full.get("sources"):
+                    st.caption("📚 " + " · ".join(s["source"] for s in full["sources"]))
+            except Exception as e:
+                st.error(f"Could not load: {e}")
