@@ -11,7 +11,7 @@ def render():
     if not baby:
         return
 
-    st.markdown("## 📋 Records")
+    st.markdown("## 📋 Historique")
 
     # ── Load data ────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ def render():
     rows = []
 
     for f in feedings:
-        icon = "🍼 Bottle" if f["feeding_type"] == "bottle" else "🤱 Breast"
+        icon = "🍼 Biberon" if f["feeding_type"] == "bottle" else "🤱 Allaitement"
         rows.append({
             "type": icon,
             "date": datetime.fromisoformat(f["fed_at"]).strftime("%Y-%m-%d %H:%M"),
@@ -49,7 +49,7 @@ def render():
 
     for w in weights:
         rows.append({
-            "type": "⚖️ Weight",
+            "type": "⚖️ Poids",
             "date": datetime.fromisoformat(w["measured_at"]).strftime("%Y-%m-%d %H:%M"),
             "value": f"{w['weight_g']} g",
             "notes": w.get("notes") or "",
@@ -64,7 +64,7 @@ def render():
         poop = "💩" if d.get("has_poop") else ""
         value = f"{pee}{poop}".strip() or "—"
         rows.append({
-            "type": "🧷 Diaper",
+            "type": "🧷 Couche",
             "date": datetime.fromisoformat(d["changed_at"]).strftime("%Y-%m-%d %H:%M"),
             "value": value,
             "notes": d.get("notes") or "",
@@ -78,24 +78,24 @@ def render():
     rows.sort(key=lambda r: r["_sort"], reverse=True)
 
     if not rows:
-        st.info("No records yet. Add a bottle or weight entry using the sidebar.")
+        st.info("Aucun enregistrement. Ajoutez un biberon ou un poids via la barre latérale.")
         return
 
-    # ── Filter ───────────────────────────────────────────────────────────────
+    # ── Filter ───────────────────────────────────────────────────────────────────
 
-    filter_options = ["All", "🍼 Bottle", "🤱 Breast", "⚖️ Weight", "🧷 Diaper"]
+    filter_options = ["Tout", "🍼 Biberon", "🤱 Allaitement", "⚖️ Poids", "🧷 Couche"]
     selected_filter = st.selectbox(
-        "Filter by type",
+        "Filtrer par type",
         filter_options,
         index=0,
         key="record_filter",
         label_visibility="collapsed",
     )
 
-    if selected_filter != "All":
+    if selected_filter != "Tout":
         rows = [r for r in rows if r["type"] == selected_filter]
 
-    st.caption(f"{len(rows)} records")
+    st.caption(f"{len(rows)} enregistrements")
 
     # ── Display rows with Edit / Remove buttons ─────────────────────────────
 
@@ -116,11 +116,11 @@ def render():
         with col_notes:
             st.markdown(r["notes"] if r["notes"] else "—")
         with col_edit:
-            if st.button("✏️", key=f"edit_{i}", help="Edit"):
+            if st.button("✏️", key=f"edit_{i}", help="Modifier"):
                 st.session_state._editing_record = i if st.session_state._editing_record != i else None
                 st.rerun()
         with col_del:
-            if st.button("🗑️", key=f"del_{i}", help="Remove"):
+            if st.button("🗑️", key=f"del_{i}", help="Supprimer"):
                 try:
                     if r["_kind"] == "feeding":
                         api.delete_feeding(r["_id"])
@@ -133,7 +133,7 @@ def render():
                         resp.raise_for_status()
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Erreur : {e}")
 
         # ── Inline edit form ─────────────────────────────────────────────────
         if st.session_state._editing_record == i:
@@ -156,18 +156,18 @@ def _render_edit_form(row: dict, idx: int, baby: dict):
         if kind == "feeding":
             dt = datetime.fromisoformat(raw["fed_at"])
             e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
-            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
+            e_time = st.time_input("Heure", value=dt.time(), key=f"etm_{idx}")
             e_qty = st.number_input(
-                "Amount (ml)", 1, 500, int(raw["quantity_ml"]), step=10, key=f"eqt_{idx}"
+                "Quantité (ml)", 1, 500, int(raw["quantity_ml"]), step=10, key=f"eqt_{idx}"
             )
             e_type = st.selectbox(
                 "Type", ["bottle", "breastfeeding"],
                 index=0 if raw["feeding_type"] == "bottle" else 1,
-                format_func=lambda t: "🍼 Bottle" if t == "bottle" else "🤱 Breast",
+                format_func=lambda t: "🍼 Biberon" if t == "bottle" else "🤱 Allaitement",
                 key=f"etp_{idx}",
             )
             e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
-            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("💾 Enregistrer", type="primary", use_container_width=True)
             if submitted:
                 new_at = datetime.combine(e_date, e_time).isoformat()
                 try:
@@ -180,15 +180,15 @@ def _render_edit_form(row: dict, idx: int, baby: dict):
                     st.session_state._editing_record = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Erreur : {e}")
         elif kind == "diaper":
             dt = datetime.fromisoformat(raw["changed_at"])
             e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
-            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
-            e_pee = st.checkbox("💧 Pee", value=bool(raw.get("has_pee", True)), key=f"epee_{idx}")
-            e_poop = st.checkbox("💩 Poop", value=bool(raw.get("has_poop", False)), key=f"epoop_{idx}")
+            e_time = st.time_input("Heure", value=dt.time(), key=f"etm_{idx}")
+            e_pee = st.checkbox("💧 Pipi", value=bool(raw.get("has_pee", True)), key=f"epee_{idx}")
+            e_poop = st.checkbox("💩 Selles", value=bool(raw.get("has_poop", False)), key=f"epoop_{idx}")
             e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
-            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("💾 Enregistrer", type="primary", use_container_width=True)
             if submitted:
                 new_at = datetime.combine(e_date, e_time).isoformat()
                 try:
@@ -201,16 +201,16 @@ def _render_edit_form(row: dict, idx: int, baby: dict):
                     st.session_state._editing_record = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Erreur : {e}")
         else:
             dt = datetime.fromisoformat(raw["measured_at"])
             e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
-            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
+            e_time = st.time_input("Heure", value=dt.time(), key=f"etm_{idx}")
             e_g = st.number_input(
-                "Weight (g)", 500, 20000, int(raw["weight_g"]), step=50, key=f"ewg_{idx}"
+                "Poids (g)", 500, 20000, int(raw["weight_g"]), step=50, key=f"ewg_{idx}"
             )
             e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
-            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("💾 Enregistrer", type="primary", use_container_width=True)
             if submitted:
                 new_at = datetime.combine(e_date, e_time).isoformat()
                 try:
@@ -223,8 +223,8 @@ def _render_edit_form(row: dict, idx: int, baby: dict):
                     st.session_state._editing_record = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Erreur : {e}")
 
-    if st.button("Cancel", key=f"cancel_{idx}"):
+    if st.button("Annuler", key=f"cancel_{idx}"):
         st.session_state._editing_record = None
         st.rerun()

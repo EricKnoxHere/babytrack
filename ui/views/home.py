@@ -10,12 +10,12 @@ from ui import api_client as api
 # ── Period config ─────────────────────────────────────────────────────────────
 
 _PERIODS = {
-    "Today": 0,
-    "Last 3 days": 3,
-    "Last week": 7,
-    "Last 14 days": 14,
-    "Last month": 30,
-    "All time": -1,
+    "Aujourd'hui": 0,
+    "3 derniers jours": 3,
+    "Dernière semaine": 7,
+    "14 derniers jours": 14,
+    "Dernier mois": 30,
+    "Tout": -1,
 }
 
 
@@ -31,7 +31,7 @@ def render():
 
     # ── Header ───────────────────────────────────────────────────────────────
 
-    st.markdown("## 🏠 Home")
+    st.markdown("## 🏠 Accueil")
 
     today = date.today()
 
@@ -68,8 +68,8 @@ def render():
         last_dt = datetime.fromisoformat(last["fed_at"])
         mins_ago = int((datetime.now() - last_dt).total_seconds() / 60)
         since_str = (
-            f"{mins_ago}min ago" if mins_ago < 60
-            else f"{mins_ago // 60}h{mins_ago % 60:02d} ago"
+            f"il y a {mins_ago}min" if mins_ago < 60
+            else f"il y a {mins_ago // 60}h{mins_ago % 60:02d}"
         )
         last_time = last_dt.strftime("%H:%M")
     else:
@@ -77,19 +77,19 @@ def render():
         last_time = "—"
 
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total volume", f"{total_ml} ml")
-    m2.metric("Feedings", count)
-    m3.metric("Last feeding", last_time, since_str)
-    m4.metric("Current weight", f"{current_weight} g" if current_weight else "—")
+    m1.metric("Volume total", f"{total_ml} ml")
+    m2.metric("Biberons", count)
+    m3.metric("Dernier biberon", last_time, since_str)
+    m4.metric("Poids actuel", f"{current_weight} g" if current_weight else "—")
     diaper_count = len(today_diapers)
     pee_count = sum(1 for d in today_diapers if d.get("has_pee"))
     poop_count = sum(1 for d in today_diapers if d.get("has_poop"))
-    m5.metric("Diapers", f"{diaper_count}", f"💧{pee_count} 💩{poop_count}")
+    m5.metric("Couches", f"{diaper_count}", f"💧{pee_count} 💩{poop_count}")
 
     # ── Period selector for charts ───────────────────────────────────────────
 
     period_label = st.selectbox(
-        "Period",
+        "Période",
         list(_PERIODS.keys()),
         index=2,                       # default = "Last week"
         key="home_period",
@@ -107,10 +107,10 @@ def render():
 
     # ── Volume chart (full width) ────────────────────────────────────────────
 
-    st.markdown("#### Daily volume (ml)")
+    st.markdown("#### Volume journalier (ml)")
 
     if not all_feedings:
-        st.caption("No feeding data yet.")
+        st.caption("Aucune donnée de biberon.")
     else:
         daily: dict = defaultdict(int)
         for f in all_feedings:
@@ -149,14 +149,14 @@ def render():
         recorded = [v for v in vols if v > 0]
         if recorded:
             avg = sum(recorded) / len(recorded)
-            st.caption(f"Avg {avg:.0f} ml/day over {len(recorded)} recorded days")
+            st.caption(f"Moy. {avg:.0f} ml/jour sur {len(recorded)} jours enregistrés")
 
     # ── Weight curve (full width) ────────────────────────────────────────────
 
-    st.markdown("#### Weight curve")
+    st.markdown("#### Courbe de poids")
 
     if not weights:
-        st.caption("No weight data yet.")
+        st.caption("Aucune donnée de poids.")
     else:
         w_labels = [
             datetime.fromisoformat(w["measured_at"]).strftime("%d/%m") for w in weights
@@ -185,16 +185,16 @@ def render():
         if len(weights) >= 2:
             gain = latest - weights[0]["weight_g"]
             sign = "+" if gain >= 0 else ""
-            st.caption(f"{latest} g  ·  {sign}{gain} g since first measurement")
+            st.caption(f"{latest} g  ·  {sign}{gain} g depuis la première pesée")
         else:
-            st.caption(f"Current: {latest} g")
+            st.caption(f"Actuel : {latest} g")
 
     # ── Diaper chart (full width) ────────────────────────────────────────────
 
-    st.markdown("#### Diapers per day")
+    st.markdown("#### Couches par jour")
 
     if not all_diapers:
-        st.caption("No diaper data yet.")
+        st.caption("Aucune donnée de couche.")
     else:
         daily_pee: dict = defaultdict(int)
         daily_poop: dict = defaultdict(int)
@@ -214,11 +214,11 @@ def render():
 
         fig = go.Figure()
         fig.add_trace(go.Bar(
-            x=labels, y=pee_vals, name="💧 Pee",
+            x=labels, y=pee_vals, name="💧 Pipi",
             marker_color="#60a5fa",
         ))
         fig.add_trace(go.Bar(
-            x=labels, y=poop_vals, name="💩 Poop",
+            x=labels, y=poop_vals, name="💩 Selles",
             marker_color="#f59e0b",
         ))
         fig.update_layout(
@@ -227,7 +227,7 @@ def render():
             margin=dict(t=8, b=0, l=0, r=0),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="count", dtick=1),
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="nombre", dtick=1),
             xaxis=dict(showgrid=False),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
@@ -236,4 +236,4 @@ def render():
         recorded_days = len(set(list(daily_pee.keys()) + list(daily_poop.keys())))
         total_changes = len([d for d in all_diapers if d["changed_at"][:10] >= start_date.isoformat()])
         if recorded_days:
-            st.caption(f"Avg {total_changes / recorded_days:.1f} changes/day over {recorded_days} recorded days")
+            st.caption(f"Moy. {total_changes / recorded_days:.1f} changes/jour sur {recorded_days} jours enregistrés")

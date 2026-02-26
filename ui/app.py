@@ -62,7 +62,7 @@ if "selected_baby" not in st.session_state:
 if "_sidebar_form" not in st.session_state:
     st.session_state._sidebar_form = None
 if "_nav_page" not in st.session_state:
-    st.session_state._nav_page = "🏠 Home"
+    st.session_state._nav_page = "🏠 Accueil"
 
 # ─── API check ───────────────────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ except Exception:
     api_ok = False
 
 if not api_ok:
-    st.error("❌ API offline — cannot connect to backend")
+    st.error("❌ API hors ligne — impossible de se connecter au serveur")
     st.stop()
 
 
@@ -81,18 +81,18 @@ if not api_ok:
 
 def _sidebar_form_feeding(baby: dict):
     """Render a feeding form inside the sidebar."""
-    st.markdown("**🍼 Log a bottle**")
+    st.markdown("**🍼 Ajouter un biberon**")
     with st.form("sidebar_feeding_form", clear_on_submit=True):
         fed_date = st.date_input("Date", value=date.today(), key="sf_date")
-        fed_time = st.time_input("Time", value=datetime.now().time(), key="sf_time")
-        qty = st.number_input("Amount (ml)", 1, 500, 90, step=10, key="sf_qty")
+        fed_time = st.time_input("Heure", value=datetime.now().time(), key="sf_time")
+        qty = st.number_input("Quantité (ml)", 1, 500, 90, step=10, key="sf_qty")
         ftype = st.selectbox(
             "Type", ["bottle", "breastfeeding"],
-            format_func=lambda t: "🍼 Bottle" if t == "bottle" else "🤱 Breast",
+            format_func=lambda t: "🍼 Biberon" if t == "bottle" else "🤱 Allaitement",
             key="sf_type",
         )
-        notes = st.text_input("Notes", key="sf_notes", placeholder="optional")
-        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        notes = st.text_input("Notes", key="sf_notes", placeholder="facultatif")
+        submitted = st.form_submit_button("✅ Enregistrer", type="primary", use_container_width=True)
         if submitted:
             fed_at = datetime.combine(fed_date, fed_time).isoformat()
             try:
@@ -100,18 +100,18 @@ def _sidebar_form_feeding(baby: dict):
                 st.session_state._sidebar_form = None
                 st.rerun()
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Erreur : {e}")
 
 
 def _sidebar_form_weight(baby: dict):
     """Render a weight form inside the sidebar."""
-    st.markdown("**⚖️ Log weight**")
+    st.markdown("**⚖️ Ajouter un poids**")
     with st.form("sidebar_weight_form", clear_on_submit=True):
         w_date = st.date_input("Date", value=date.today(), key="sw_date")
-        w_time = st.time_input("Time", value=datetime.now().time(), key="sw_time")
-        w_g = st.number_input("Weight (g)", 500, 20000, 3200, step=50, key="sw_g")
-        w_notes = st.text_input("Notes", key="sw_notes", placeholder="optional")
-        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        w_time = st.time_input("Heure", value=datetime.now().time(), key="sw_time")
+        w_g = st.number_input("Poids (g)", 500, 20000, 3200, step=50, key="sw_g")
+        w_notes = st.text_input("Notes", key="sw_notes", placeholder="facultatif")
+        submitted = st.form_submit_button("✅ Enregistrer", type="primary", use_container_width=True)
         if submitted:
             w_at = datetime.combine(w_date, w_time).isoformat()
             try:
@@ -119,19 +119,19 @@ def _sidebar_form_weight(baby: dict):
                 st.session_state._sidebar_form = None
                 st.rerun()
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Erreur : {e}")
 
 
 def _sidebar_form_diaper(baby: dict):
     """Render a diaper form inside the sidebar."""
-    st.markdown("**🧷 Log diaper**")
+    st.markdown("**🧷 Ajouter une couche**")
     with st.form("sidebar_diaper_form", clear_on_submit=True):
         d_date = st.date_input("Date", value=date.today(), key="sd_date")
-        d_time = st.time_input("Time", value=datetime.now().time(), key="sd_time")
-        d_pee = st.checkbox("💧 Pee", value=True, key="sd_pee")
-        d_poop = st.checkbox("💩 Poop", value=False, key="sd_poop")
-        d_notes = st.text_input("Notes", key="sd_notes", placeholder="optional")
-        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        d_time = st.time_input("Heure", value=datetime.now().time(), key="sd_time")
+        d_pee = st.checkbox("💧 Pipi", value=True, key="sd_pee")
+        d_poop = st.checkbox("💩 Selles", value=False, key="sd_poop")
+        d_notes = st.text_input("Notes", key="sd_notes", placeholder="facultatif")
+        submitted = st.form_submit_button("✅ Enregistrer", type="primary", use_container_width=True)
         if submitted:
             d_at = datetime.combine(d_date, d_time).isoformat()
             try:
@@ -139,7 +139,7 @@ def _sidebar_form_diaper(baby: dict):
                 st.session_state._sidebar_form = None
                 st.rerun()
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Erreur : {e}")
 
 
 # ─── Load babies ─────────────────────────────────────────────────────────────
@@ -155,14 +155,14 @@ with st.sidebar:
     st.markdown("### 🍼 BabyTrack")
 
     if not babies:
-        st.info("No babies registered yet.")
-        if st.button("➕ Create a baby", use_container_width=True, type="primary"):
+        st.info("Aucun bébé enregistré.")
+        if st.button("➕ Ajouter un bébé", use_container_width=True, type="primary"):
             st.session_state._page_override = "CreateBaby"
             st.rerun()
         st.stop()
 
     # ── Navigation ───────────────────────────────────────────────────────────
-    _nav_options = ["🏠 Home", "📋 Records", "💬 Chat"]
+    _nav_options = ["🏠 Accueil", "📋 Historique", "💬 Chat"]
     _current_idx = next(
         (i for i, o in enumerate(_nav_options) if o == st.session_state._nav_page), 0
     )
@@ -178,7 +178,7 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Baby selector (radio buttons) + entry buttons ────────────────────────
-    st.markdown("**Baby**")
+    st.markdown("**Bébé**")
     baby_names = [b["name"] for b in babies]
     baby_map = {b["name"]: b for b in babies}
 
@@ -200,7 +200,7 @@ with st.sidebar:
     # Entry buttons (stacked vertically, inside Baby section)
     active_form = st.session_state._sidebar_form
     if st.button(
-        "✕ Close" if active_form == "feeding" else "➕ Bottle 🍼",
+        "✕ Fermer" if active_form == "feeding" else "➕ Biberon 🍼",
         use_container_width=True,
         type="primary" if active_form == "feeding" else "secondary",
         key="sb_btn_feeding",
@@ -209,7 +209,7 @@ with st.sidebar:
         st.rerun()
 
     if st.button(
-        "✕ Close" if active_form == "weight" else "➕ Weight ⚖️",
+        "✕ Fermer" if active_form == "weight" else "➕ Poids ⚖️",
         use_container_width=True,
         type="primary" if active_form == "weight" else "secondary",
         key="sb_btn_weight",
@@ -218,7 +218,7 @@ with st.sidebar:
         st.rerun()
 
     if st.button(
-        "✕ Close" if active_form == "diaper" else "➕ Diaper 🧷",
+        "✕ Fermer" if active_form == "diaper" else "➕ Couche 🧷",
         use_container_width=True,
         type="primary" if active_form == "diaper" else "secondary",
         key="sb_btn_diaper",
@@ -234,19 +234,19 @@ with st.sidebar:
     elif active_form == "diaper":
         _sidebar_form_diaper(st.session_state.selected_baby)
 
-    if st.button("➕ New baby", use_container_width=True, key="sidebar_new_baby"):
+    if st.button("➕ Nouveau bébé", use_container_width=True, key="sidebar_new_baby"):
         st.session_state._page_override = "CreateBaby"
         st.rerun()
 
 # ─── Page routing ────────────────────────────────────────────────────────────
 
 if st.session_state.get("_page_override") == "CreateBaby":
-    st.title("👶 New baby")
+    st.title("👶 Nouveau bébé")
     with st.form("create_baby"):
-        name = st.text_input("Name")
-        dob = st.date_input("Date of birth", value=date.today())
-        weight = st.number_input("Birth weight (g)", 500, 6000, 3300)
-        if st.form_submit_button("✅ Create", use_container_width=True, type="primary"):
+        name = st.text_input("Prénom")
+        dob = st.date_input("Date de naissance", value=date.today())
+        weight = st.number_input("Poids de naissance (g)", 500, 6000, 3300)
+        if st.form_submit_button("✅ Créer", use_container_width=True, type="primary"):
             if name:
                 try:
                     baby = api.create_baby(name, dob, int(weight))
@@ -254,18 +254,18 @@ if st.session_state.get("_page_override") == "CreateBaby":
                     st.session_state._page_override = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Erreur : {e}")
             else:
-                st.warning("Enter a name")
-    if st.button("← Back"):
+                st.warning("Entrez un prénom")
+    if st.button("← Retour"):
         st.session_state._page_override = None
         st.rerun()
 
-elif "Home" in nav:
+elif "Accueil" in nav:
     from ui.views.home import render
     render()
 
-elif "Records" in nav:
+elif "Historique" in nav:
     from ui.views.record import render
     render()
 

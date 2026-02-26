@@ -31,7 +31,7 @@ def render():
         st.markdown("---")
         st.markdown("**💬 Conversations**")
 
-        if st.button("➕ New chat", use_container_width=True, key="new_chat_btn"):
+        if st.button("➕ Nouvelle conversation", use_container_width=True, key="new_chat_btn"):
             _save_current_if_needed(baby)
             st.session_state.chat_messages = []
             st.session_state.chat_conv_id = None
@@ -58,7 +58,7 @@ def render():
                     _load_conversation(conv["id"])
                     st.rerun()
             with col_del:
-                if st.button("🗑️", key=f"del_conv_{conv['id']}", help="Delete"):
+                if st.button("🗑️", key=f"del_conv_{conv['id']}", help="Supprimer"):
                     try:
                         api.delete_conversation(conv["id"])
                         if st.session_state.chat_conv_id == conv["id"]:
@@ -72,14 +72,14 @@ def render():
 
     if not st.session_state.chat_messages:
         st.markdown("## 💬 Chat")
-        st.caption(f"Ask anything about {name}'s feeding, weight, diapers, or health.")
+        st.caption(f"Posez vos questions sur l'alimentation, le poids, les couches ou la santé de {name}.")
 
         suggestions = [
-            f"How is {name} feeding today?",
-            "Full review of yesterday",
-            "Weekly feeding trends",
-            f"Is {name} eating enough?",
-            f"Any concerns about {name}'s growth?",
+            f"Comment {name} mange aujourd'hui ?",
+            "Bilan complet d'hier",
+            "Tendances de la semaine",
+            f"Est-ce que {name} mange assez ?",
+            f"Des préoccupations sur la croissance de {name} ?",
         ]
 
         # Spacer to push suggestions toward the bottom
@@ -105,7 +105,7 @@ def render():
 
     # ── Chat input ───────────────────────────────────────────────────────────
 
-    user_input = st.chat_input(f"Ask about {name}...")
+    user_input = st.chat_input(f"Question sur {name}...")
 
     if user_input:
         _handle_user_message(baby, user_input)
@@ -148,7 +148,7 @@ def _handle_user_message(baby: dict, user_input: str):
             {"role": "assistant", "content": response}
         )
     except Exception as e:
-        error_msg = f"Sorry, something went wrong: {e}"
+        error_msg = f"Désolé, une erreur est survenue : {e}"
         st.session_state.chat_messages.append(
             {"role": "assistant", "content": error_msg}
         )
@@ -165,7 +165,7 @@ def _auto_save(baby: dict):
 
     # Generate title from first user message
     first_user = next(
-        (m["content"] for m in messages if m["role"] == "user"), "New chat"
+        (m["content"] for m in messages if m["role"] == "user"), "Nouvelle conversation"
     )
     title = first_user[:60]
 
