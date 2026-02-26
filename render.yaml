@@ -9,7 +9,7 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false          # à renseigner dans le dashboard Render
       - key: DATABASE_URL
-        value: /tmp/babytrack.db   # éphémère sur free tier — OK pour démo
+        sync: false          # Supabase PostgreSQL URI — à renseigner dans le dashboard Render
       - key: DOCS_DIR
         value: data/docs
       - key: INDEX_DIR
