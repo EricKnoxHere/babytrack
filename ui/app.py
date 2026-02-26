@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
-from datetime import date
+from datetime import date, datetime
 from ui import api_client as api
 
 # ─── Page config ─────────────────────────────────────────────────────────────
@@ -49,8 +49,8 @@ html, body, [class*="css"] {
 
 if "selected_baby" not in st.session_state:
     st.session_state.selected_baby = None
-if "_home_widget" not in st.session_state:
-    st.session_state._home_widget = None
+if "_sidebar_form" not in st.session_state:
+    st.session_state._sidebar_form = None
 if "_nav_page" not in st.session_state:
     st.session_state._nav_page = "🏠 Home"
 
@@ -66,7 +66,53 @@ if not api_ok:
     st.error("❌ API offline — cannot connect to backend")
     st.stop()
 
-# ─── Sidebar (minimal) ──────────────────────────────────────────────────────
+
+# ─── Sidebar form helpers (defined here, rendered inside sidebar) ────────────
+
+def _sidebar_form_feeding(baby: dict):
+    """Render a feeding form inside the sidebar."""
+    st.markdown("**🍼 Log a bottle**")
+    with st.form("sidebar_feeding_form", clear_on_submit=True):
+        fed_date = st.date_input("Date", value=date.today(), key="sf_date")
+        fed_time = st.time_input("Time", value=datetime.now().time(), key="sf_time")
+        qty = st.number_input("Amount (ml)", 1, 500, 90, step=10, key="sf_qty")
+        ftype = st.selectbox(
+            "Type", ["bottle", "breastfeeding"],
+            format_func=lambda t: "🍼 Bottle" if t == "bottle" else "🤱 Breast",
+            key="sf_type",
+        )
+        notes = st.text_input("Notes", key="sf_notes", placeholder="optional")
+        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        if submitted:
+            fed_at = datetime.combine(fed_date, fed_time).isoformat()
+            try:
+                api.add_feeding(baby["id"], fed_at, int(qty), ftype, notes or None)
+                st.session_state._sidebar_form = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+
+def _sidebar_form_weight(baby: dict):
+    """Render a weight form inside the sidebar."""
+    st.markdown("**⚖️ Log weight**")
+    with st.form("sidebar_weight_form", clear_on_submit=True):
+        w_date = st.date_input("Date", value=date.today(), key="sw_date")
+        w_time = st.time_input("Time", value=datetime.now().time(), key="sw_time")
+        w_g = st.number_input("Weight (g)", 500, 20000, 3200, step=50, key="sw_g")
+        w_notes = st.text_input("Notes", key="sw_notes", placeholder="optional")
+        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        if submitted:
+            w_at = datetime.combine(w_date, w_time).isoformat()
+            try:
+                api.add_weight(baby["id"], w_at, int(w_g), w_notes or None)
+                st.session_state._sidebar_form = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+
+# ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("### 🍼 BabyTrack")
@@ -92,12 +138,48 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Navigation — 2 options only
+    # ── Entry buttons ────────────────────────────────────────────────────────
+    active_form = st.session_state._sidebar_form
+    btn_col1, btn_col2 = st.columns(2)
+
+    with btn_col1:
+        if st.button(
+            "✕ Close" if active_form == "feeding" else "+ Bottle 🍼",
+            use_container_width=True,
+            type="primary" if active_form == "feeding" else "secondary",
+            key="sb_btn_feeding",
+        ):
+            st.session_state._sidebar_form = None if active_form == "feeding" else "feeding"
+            st.rerun()
+
+    with btn_col2:
+        if st.button(
+            "✕ Close" if active_form == "weight" else "+ Weight ⚖️",
+            use_container_width=True,
+            type="primary" if active_form == "weight" else "secondary",
+            key="sb_btn_weight",
+        ):
+            st.session_state._sidebar_form = None if active_form == "weight" else "weight"
+            st.rerun()
+
+    # ── Inline sidebar form ──────────────────────────────────────────────────
+    if active_form == "feeding":
+        _sidebar_form_feeding(st.session_state.selected_baby)
+    elif active_form == "weight":
+        _sidebar_form_weight(st.session_state.selected_baby)
+
+    st.markdown("---")
+
+    # Navigation — 3 tabs
+    _nav_options = ["🏠 Home", "📋 Records", "💬 Chat"]
+    _current_idx = next(
+        (i for i, o in enumerate(_nav_options) if o == st.session_state._nav_page), 0
+    )
     nav = st.radio(
         "nav",
-        ["🏠 Home", "💬 Chat"],
+        _nav_options,
         label_visibility="collapsed",
-        index=0 if st.session_state._nav_page == "🏠 Home" else 1,
+        index=_current_idx,
         key="sidebar_nav",
     )
     st.session_state._nav_page = nav
@@ -132,6 +214,10 @@ if st.session_state.get("_page_override") == "CreateBaby":
 
 elif "Home" in nav:
     from ui.views.home import render
+    render()
+
+elif "Records" in nav:
+    from ui.views.record import render
     render()
 
 elif "Chat" in nav:

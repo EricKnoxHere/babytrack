@@ -1,4 +1,4 @@
-"""Home — Feed tracker + analytics."""
+"""Home — Dashboard with metrics and charts."""
 
 import streamlit as st
 import plotly.graph_objects as go
@@ -7,10 +7,16 @@ from datetime import date, datetime, timedelta
 from ui import api_client as api
 
 
-# ── Period helpers ────────────────────────────────────────────────────────────
+# ── Period config ─────────────────────────────────────────────────────────────
 
-_PERIOD_OPTIONS = ["Today", "7 days", "14 days", "30 days"]
-_PERIOD_DAYS = {"Today": 0, "7 days": 7, "14 days": 14, "30 days": 30}
+_PERIODS = {
+    "Today": 0,
+    "Last 3 days": 3,
+    "Last week": 7,
+    "Last 14 days": 14,
+    "Last month": 30,
+    "All time": -1,
+}
 
 
 def render():
@@ -25,53 +31,36 @@ def render():
     age_days = (date.today() - birth).days
     age_label = f"{age_days // 30}mo {age_days % 30}d" if age_days >= 30 else f"{age_days} days old"
 
-    # ── Header (full width) ──────────────────────────────────────────────────
+    # ── Header row: title + period selector ──────────────────────────────────
 
-    st.markdown(
-        f"## 🍼 {baby['name']} "
-        f"<span style='color:#94a3b8;font-size:1rem;font-weight:400'>{age_label}</span>",
-        unsafe_allow_html=True,
-    )
+    h_col, p_col = st.columns([3, 1])
+    with h_col:
+        st.markdown(
+            f"## 🍼 {baby['name']} "
+            f"<span style='color:#94a3b8;font-size:1rem;font-weight:400'>{age_label}</span>",
+            unsafe_allow_html=True,
+        )
+    with p_col:
+        period_label = st.selectbox(
+            "Period",
+            list(_PERIODS.keys()),
+            index=0,
+            key="home_period",
+            label_visibility="collapsed",
+        )
 
-    # ── Quick action buttons ──────────────────────────────────────────────────
+    period_days = _PERIODS[period_label]
+    today = date.today()
 
-    active = st.session_state.get("_home_widget")
-    qa1, qa2, _sp = st.columns([1, 1, 5])
-
-    with qa1:
-        if st.button(
-            "✕ Close" if active == "feeding" else "+ Bottle 🍼",
-            use_container_width=True,
-            type="primary" if active == "feeding" else "secondary",
-            key="qa_feeding",
-        ):
-            st.session_state._home_widget = None if active == "feeding" else "feeding"
-            st.rerun()
-
-    with qa2:
-        if st.button(
-            "✕ Close" if active == "weight" else "+ Weight ⚖️",
-            use_container_width=True,
-            type="primary" if active == "weight" else "secondary",
-            key="qa_weight",
-        ):
-            st.session_state._home_widget = None if active == "weight" else "weight"
-            st.rerun()
-
-    # ── Inline form ──────────────────────────────────────────────────────────
-
-    if active == "feeding":
-        _form_feeding(baby)
-    elif active == "weight":
-        _form_weight(baby)
+    # Compute date range
+    if period_days == 0:
+        start_date = today
+    elif period_days == -1:
+        start_date = birth
+    else:
+        start_date = today - timedelta(days=period_days - 1)
 
     # ── Load data ────────────────────────────────────────────────────────────
-
-    today = date.today()
-    try:
-        today_feedings = api.get_feedings(baby["id"], day=today)
-    except Exception:
-        today_feedings = []
 
     try:
         all_feedings = api.get_feedings(baby["id"], start=birth, end=today)
@@ -83,52 +72,25 @@ def render():
     except Exception:
         weights = []
 
-    # ── 3-column widget row ───────────────────────────────────────────────────
-
-    st.markdown("")
-    col_today, col_vol, col_wt = st.columns(3)
-
-    with col_today:
-        _widget_today(today_feedings, weights)
-
-    with col_vol:
-        _widget_volume_chart(all_feedings, birth, today)
-
-    with col_wt:
-        _widget_weight_chart(weights)
-
-    # ── Period selector + timeline ────────────────────────────────────────────
-
-    st.markdown("---")
-    period_label = st.radio(
-        "Show feedings for",
-        _PERIOD_OPTIONS,
-        horizontal=True,
-        key="home_period",
-    )
-    period_days = _PERIOD_DAYS[period_label]
-
+    # Filter feedings for selected period
     if period_days == 0:
-        timeline_feedings = today_feedings
+        period_feedings = [f for f in all_feedings if f["fed_at"][:10] == today.isoformat()]
+    elif period_days == -1:
+        period_feedings = all_feedings
     else:
-        cutoff = today - timedelta(days=period_days - 1)
-        timeline_feedings = [
+        period_feedings = [
             f for f in all_feedings
-            if f["fed_at"][:10] >= cutoff.isoformat()
+            if f["fed_at"][:10] >= start_date.isoformat()
         ]
 
-    _feeding_timeline(timeline_feedings, period_days)
+    # ── Metrics row ──────────────────────────────────────────────────────────
 
-
-# ── Widget: Today's numbers ───────────────────────────────────────────────────
-
-def _widget_today(feedings: list, weights: list):
-    total_ml = sum(f["quantity_ml"] for f in feedings)
-    count = len(feedings)
+    total_ml = sum(f["quantity_ml"] for f in period_feedings)
+    count = len(period_feedings)
     current_weight = weights[-1]["weight_g"] if weights else None
 
-    if feedings:
-        last = max(feedings, key=lambda f: f["fed_at"])
+    if period_feedings:
+        last = max(period_feedings, key=lambda f: f["fed_at"])
         last_dt = datetime.fromisoformat(last["fed_at"])
         mins_ago = int((datetime.now() - last_dt).total_seconds() / 60)
         since_str = (
@@ -140,188 +102,92 @@ def _widget_today(feedings: list, weights: list):
         since_str = None
         last_time = "—"
 
-    st.markdown("**Today**")
-    st.metric("Volume", f"{total_ml} ml")
-    st.metric("Feedings", count)
-    st.metric("Last feeding", last_time, since_str)
-    st.metric("Current weight", f"{current_weight} g" if current_weight else "—")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total volume", f"{total_ml} ml")
+    m2.metric("Feedings", count)
+    m3.metric("Last feeding", last_time, since_str)
+    m4.metric("Current weight", f"{current_weight} g" if current_weight else "—")
 
+    # ── Volume chart (full width) ────────────────────────────────────────────
 
-# ── Widget: Daily volume since birth ──────────────────────────────────────────
-
-def _widget_volume_chart(all_feedings: list, birth: date, today: date):
-    st.markdown("**Daily volume (ml)**")
+    st.markdown("#### Daily volume (ml)")
 
     if not all_feedings:
         st.caption("No feeding data yet.")
-        return
-
-    daily: dict = defaultdict(int)
-    for f in all_feedings:
-        daily[f["fed_at"][:10]] += f["quantity_ml"]
-
-    total_days = (today - birth).days + 1
-    days = [birth + timedelta(days=i) for i in range(total_days)]
-    vols = [daily.get(d.isoformat(), 0) for d in days]
-    labels = [d.strftime("%d/%m") for d in days]
-
-    # Line + fill for long histories, bars for short
-    if total_days > 30:
-        trace = go.Scatter(
-            x=labels, y=vols,
-            mode="lines",
-            line=dict(color="#3b82f6", width=2),
-            fill="tozeroy",
-            fillcolor="rgba(59,130,246,0.12)",
-        )
     else:
-        trace = go.Bar(x=labels, y=vols, marker_color="#3b82f6")
+        daily: dict = defaultdict(int)
+        for f in all_feedings:
+            d = f["fed_at"][:10]
+            if d >= start_date.isoformat():
+                daily[d] += f["quantity_ml"]
 
-    fig = go.Figure(trace)
-    fig.update_layout(
-        height=260,
-        margin=dict(t=4, b=0, l=0, r=0),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="ml"),
-        xaxis=dict(showgrid=False),
-        showlegend=False,
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        chart_days_count = (today - start_date).days + 1
+        days = [start_date + timedelta(days=i) for i in range(chart_days_count)]
+        vols = [daily.get(d.isoformat(), 0) for d in days]
+        labels = [d.strftime("%d/%m") for d in days]
 
-    recorded = [v for v in vols if v > 0]
-    if recorded:
-        avg = sum(recorded) / len(recorded)
-        st.caption(f"Avg {avg:.0f} ml/day over {len(recorded)} recorded days")
+        if chart_days_count > 30:
+            trace = go.Scatter(
+                x=labels, y=vols,
+                mode="lines",
+                line=dict(color="#3b82f6", width=2),
+                fill="tozeroy",
+                fillcolor="rgba(59,130,246,0.12)",
+            )
+        else:
+            trace = go.Bar(x=labels, y=vols, marker_color="#3b82f6")
 
+        fig = go.Figure(trace)
+        fig.update_layout(
+            height=300,
+            margin=dict(t=8, b=0, l=0, r=0),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="ml"),
+            xaxis=dict(showgrid=False),
+            showlegend=False,
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-# ── Widget: Weight curve since birth ──────────────────────────────────────────
+        recorded = [v for v in vols if v > 0]
+        if recorded:
+            avg = sum(recorded) / len(recorded)
+            st.caption(f"Avg {avg:.0f} ml/day over {len(recorded)} recorded days")
 
-def _widget_weight_chart(weights: list):
-    st.markdown("**Weight**")
+    # ── Weight curve (full width) ────────────────────────────────────────────
+
+    st.markdown("#### Weight curve")
 
     if not weights:
         st.caption("No weight data yet.")
-        return
-
-    w_labels = [
-        datetime.fromisoformat(w["measured_at"]).strftime("%d/%m") for w in weights
-    ]
-    w_vals = [w["weight_g"] for w in weights]
-
-    fig = go.Figure(go.Scatter(
-        x=w_labels, y=w_vals,
-        mode="lines+markers",
-        line=dict(color="#3b82f6", width=3),
-        marker=dict(size=6, color="#3b82f6"),
-        hovertemplate="%{y} g<extra></extra>",
-    ))
-    fig.update_layout(
-        height=260,
-        margin=dict(t=4, b=0, l=0, r=0),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="g"),
-        xaxis=dict(showgrid=False),
-        showlegend=False,
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    latest = weights[-1]["weight_g"]
-    if len(weights) >= 2:
-        gain = latest - weights[0]["weight_g"]
-        sign = "+" if gain >= 0 else ""
-        st.caption(f"{latest} g  ·  {sign}{gain} g since first measurement")
     else:
-        st.caption(f"Current: {latest} g")
+        w_labels = [
+            datetime.fromisoformat(w["measured_at"]).strftime("%d/%m") for w in weights
+        ]
+        w_vals = [w["weight_g"] for w in weights]
 
-
-# ── Feeding timeline ──────────────────────────────────────────────────────────
-
-def _feeding_timeline(feedings: list, period_days: int):
-    st.markdown("#### Feedings")
-
-    if not feedings:
-        st.caption("Nothing recorded yet — log a bottle with the button above.")
-        return
-
-    for f in sorted(feedings, key=lambda x: x["fed_at"], reverse=True):
-        fmt = "%d/%m %H:%M" if period_days > 0 else "%H:%M"
-        t = datetime.fromisoformat(f["fed_at"]).strftime(fmt)
-        icon = "🍼" if f["feeding_type"] == "bottle" else "🤱"
-        note = f"  ·  _{f['notes']}_" if f.get("notes") else ""
-
-        row_info, row_del = st.columns([8, 1])
-        with row_info:
-            st.markdown(f"`{t}`  {icon} **{f['quantity_ml']} ml**{note}")
-        with row_del:
-            if st.button("✕", key=f"del_f_{f['id']}", help="Delete"):
-                try:
-                    api.delete_feeding(f["id"])
-                    st.rerun()
-                except Exception:
-                    pass
-
-
-# ── Inline forms ──────────────────────────────────────────────────────────────
-
-def _form_feeding(baby: dict):
-    st.markdown(
-        "<div style='background:#f0f9ff;border:1px solid #bae6fd;"
-        "border-radius:12px;padding:1rem 1.25rem;margin:0.5rem 0 1rem'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("**🍼 Log a bottle**")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        fed_date = st.date_input("Date", value=date.today(), key="ff_date")
-    with c2:
-        fed_time = st.time_input("Time", value=datetime.now().time(), key="ff_time")
-    with c3:
-        qty = st.number_input("Amount (ml)", 1, 500, 90, step=10, key="ff_qty")
-    with c4:
-        ftype = st.selectbox(
-            "Type", ["bottle", "breastfeeding"],
-            format_func=lambda t: "🍼 Bottle" if t == "bottle" else "🤱 Breast",
-            key="ff_type",
+        fig = go.Figure(go.Scatter(
+            x=w_labels, y=w_vals,
+            mode="lines+markers",
+            line=dict(color="#10b981", width=3),
+            marker=dict(size=6, color="#10b981"),
+            hovertemplate="%{y} g<extra></extra>",
+        ))
+        fig.update_layout(
+            height=300,
+            margin=dict(t=8, b=0, l=0, r=0),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="g"),
+            xaxis=dict(showgrid=False),
+            showlegend=False,
         )
-    notes = st.text_input("Notes (optional)", key="ff_notes", placeholder="e.g. baby was hungry")
-    col_save, _ = st.columns([1, 4])
-    with col_save:
-        if st.button("✅ Save", type="primary", use_container_width=True, key="ff_save"):
-            fed_at = datetime.combine(fed_date, fed_time).isoformat()
-            try:
-                api.add_feeding(baby["id"], fed_at, int(qty), ftype, notes or None)
-                st.session_state._home_widget = None
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.plotly_chart(fig, use_container_width=True)
 
-
-def _form_weight(baby: dict):
-    st.markdown(
-        "<div style='background:#f0fdf4;border:1px solid #bbf7d0;"
-        "border-radius:12px;padding:1rem 1.25rem;margin:0.5rem 0 1rem'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("**⚖️ Log weight**")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        w_date = st.date_input("Date", value=date.today(), key="wf_date")
-    with c2:
-        w_time = st.time_input("Time", value=datetime.now().time(), key="wf_time")
-    with c3:
-        w_g = st.number_input("Weight (g)", 500, 20000, 3200, step=50, key="wf_g")
-    w_notes = st.text_input("Notes (optional)", key="wf_notes", placeholder="e.g. pediatrician visit")
-    col_save, _ = st.columns([1, 4])
-    with col_save:
-        if st.button("✅ Save", type="primary", use_container_width=True, key="wf_save"):
-            w_at = datetime.combine(w_date, w_time).isoformat()
-            try:
-                api.add_weight(baby["id"], w_at, int(w_g), w_notes or None)
-                st.session_state._home_widget = None
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    st.markdown("</div>", unsafe_allow_html=True)
+        latest = weights[-1]["weight_g"]
+        if len(weights) >= 2:
+            gain = latest - weights[0]["weight_g"]
+            sign = "+" if gain >= 0 else ""
+            st.caption(f"{latest} g  ·  {sign}{gain} g since first measurement")
+        else:
+            st.caption(f"Current: {latest} g")
