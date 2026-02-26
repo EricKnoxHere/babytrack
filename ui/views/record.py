@@ -25,6 +25,11 @@ def render():
     except Exception:
         weights = []
 
+    try:
+        diapers = api.get_diapers(baby["id"])
+    except Exception:
+        diapers = []
+
     # ── Build unified rows ───────────────────────────────────────────────────
 
     rows = []
@@ -54,6 +59,21 @@ def render():
             "_raw": w,
         })
 
+    for d in diapers:
+        pee = "💧" if d.get("has_pee") else ""
+        poop = "💩" if d.get("has_poop") else ""
+        value = f"{pee}{poop}".strip() or "—"
+        rows.append({
+            "type": "🧷 Diaper",
+            "date": datetime.fromisoformat(d["changed_at"]).strftime("%Y-%m-%d %H:%M"),
+            "value": value,
+            "notes": d.get("notes") or "",
+            "_sort": d["changed_at"],
+            "_kind": "diaper",
+            "_id": d["id"],
+            "_raw": d,
+        })
+
     # Sort newest first
     rows.sort(key=lambda r: r["_sort"], reverse=True)
 
@@ -63,7 +83,7 @@ def render():
 
     # ── Filter ───────────────────────────────────────────────────────────────
 
-    filter_options = ["All", "🍼 Bottle", "🤱 Breast", "⚖️ Weight"]
+    filter_options = ["All", "🍼 Bottle", "🤱 Breast", "⚖️ Weight", "🧷 Diaper"]
     selected_filter = st.selectbox(
         "Filter by type",
         filter_options,
@@ -104,6 +124,8 @@ def render():
                 try:
                     if r["_kind"] == "feeding":
                         api.delete_feeding(r["_id"])
+                    elif r["_kind"] == "diaper":
+                        api.delete_diaper(r["_id"])
                     else:
                         resp = requests.delete(
                             f"{api.API_BASE}/weights/{r['_id']}", timeout=api.TIMEOUT
@@ -153,6 +175,27 @@ def _render_edit_form(row: dict, idx: int, baby: dict):
                         "fed_at": new_at,
                         "quantity_ml": int(e_qty),
                         "feeding_type": e_type,
+                        "notes": e_notes or None,
+                    })
+                    st.session_state._editing_record = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+        elif kind == "diaper":
+            dt = datetime.fromisoformat(raw["changed_at"])
+            e_date = st.date_input("Date", value=dt.date(), key=f"edt_{idx}")
+            e_time = st.time_input("Time", value=dt.time(), key=f"etm_{idx}")
+            e_pee = st.checkbox("💧 Pee", value=bool(raw.get("has_pee", True)), key=f"epee_{idx}")
+            e_poop = st.checkbox("💩 Poop", value=bool(raw.get("has_poop", False)), key=f"epoop_{idx}")
+            e_notes = st.text_input("Notes", value=raw.get("notes") or "", key=f"ent_{idx}")
+            submitted = st.form_submit_button("💾 Save", type="primary", use_container_width=True)
+            if submitted:
+                new_at = datetime.combine(e_date, e_time).isoformat()
+                try:
+                    api.update_diaper(raw["id"], {
+                        "changed_at": new_at,
+                        "has_pee": e_pee,
+                        "has_poop": e_poop,
                         "notes": e_notes or None,
                     })
                     st.session_state._editing_record = None

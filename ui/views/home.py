@@ -33,26 +33,7 @@ def render():
 
     st.markdown("## 🏠 Home")
 
-    # ── Period selector (full width, own line) ───────────────────────────────
-
-    period_label = st.selectbox(
-        "Period",
-        list(_PERIODS.keys()),
-        index=0,
-        key="home_period",
-        label_visibility="collapsed",
-    )
-
-    period_days = _PERIODS[period_label]
     today = date.today()
-
-    # Compute date range
-    if period_days == 0:
-        start_date = today
-    elif period_days == -1:
-        start_date = birth
-    else:
-        start_date = today - timedelta(days=period_days - 1)
 
     # ── Load data ────────────────────────────────────────────────────────────
 
@@ -66,25 +47,24 @@ def render():
     except Exception:
         weights = []
 
-    # Filter feedings for selected period
-    if period_days == 0:
-        period_feedings = [f for f in all_feedings if f["fed_at"][:10] == today.isoformat()]
-    elif period_days == -1:
-        period_feedings = all_feedings
-    else:
-        period_feedings = [
-            f for f in all_feedings
-            if f["fed_at"][:10] >= start_date.isoformat()
-        ]
+    try:
+        all_diapers = api.get_diapers(baby["id"], start=birth, end=today)
+    except Exception:
+        all_diapers = []
 
-    # ── Metrics row ──────────────────────────────────────────────────────────
+    # ── Today's data for metrics ─────────────────────────────────────────────
 
-    total_ml = sum(f["quantity_ml"] for f in period_feedings)
-    count = len(period_feedings)
+    today_feedings = [f for f in all_feedings if f["fed_at"][:10] == today.isoformat()]
+    today_diapers = [d for d in all_diapers if d["changed_at"][:10] == today.isoformat()]
+
+    # ── Metrics row (always today) ───────────────────────────────────────────
+
+    total_ml = sum(f["quantity_ml"] for f in today_feedings)
+    count = len(today_feedings)
     current_weight = weights[-1]["weight_g"] if weights else None
 
-    if period_feedings:
-        last = max(period_feedings, key=lambda f: f["fed_at"])
+    if today_feedings:
+        last = max(today_feedings, key=lambda f: f["fed_at"])
         last_dt = datetime.fromisoformat(last["fed_at"])
         mins_ago = int((datetime.now() - last_dt).total_seconds() / 60)
         since_str = (
@@ -96,11 +76,34 @@ def render():
         since_str = None
         last_time = "—"
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Total volume", f"{total_ml} ml")
     m2.metric("Feedings", count)
     m3.metric("Last feeding", last_time, since_str)
     m4.metric("Current weight", f"{current_weight} g" if current_weight else "—")
+    diaper_count = len(today_diapers)
+    pee_count = sum(1 for d in today_diapers if d.get("has_pee"))
+    poop_count = sum(1 for d in today_diapers if d.get("has_poop"))
+    m5.metric("Diapers", f"{diaper_count}", f"💧{pee_count} 💩{poop_count}")
+
+    # ── Period selector for charts ───────────────────────────────────────────
+
+    period_label = st.selectbox(
+        "Period",
+        list(_PERIODS.keys()),
+        index=2,                       # default = "Last week"
+        key="home_period",
+        label_visibility="collapsed",
+    )
+
+    period_days = _PERIODS[period_label]
+
+    if period_days == 0:
+        start_date = today
+    elif period_days == -1:
+        start_date = birth
+    else:
+        start_date = today - timedelta(days=period_days - 1)
 
     # ── Volume chart (full width) ────────────────────────────────────────────
 
@@ -186,41 +189,51 @@ def render():
         else:
             st.caption(f"Current: {latest} g")
 
-    # ── Previous AI reports ──────────────────────────────────────────────────
+    # ── Diaper chart (full width) ────────────────────────────────────────────
 
-    st.markdown("---")
-    st.markdown("#### 📝 Previous AI reports")
+    st.markdown("#### Diapers per day")
 
-    try:
-        reports = api.list_analysis_history(baby["id"], limit=10)
-    except Exception:
-        reports = []
-
-    if not reports:
-        st.caption("No AI reports yet. Use the Chat to generate your first analysis.")
+    if not all_diapers:
+        st.caption("No diaper data yet.")
     else:
-        for report in reports:
-            report_id = report.get("id")
-            created = report.get("created_at", "")
-            try:
-                dt_label = datetime.fromisoformat(created).strftime("%d/%m/%Y %H:%M")
-            except Exception:
-                dt_label = created[:16] if len(created) >= 16 else created
+        daily_pee: dict = defaultdict(int)
+        daily_poop: dict = defaultdict(int)
+        for d in all_diapers:
+            day_str = d["changed_at"][:10]
+            if day_str >= start_date.isoformat():
+                if d.get("has_pee"):
+                    daily_pee[day_str] += 1
+                if d.get("has_poop"):
+                    daily_poop[day_str] += 1
 
-            period_info = report.get("period", "")
-            summary = report.get("summary", "Analysis report")
+        chart_days_count = (today - start_date).days + 1
+        days = [start_date + timedelta(days=i) for i in range(chart_days_count)]
+        pee_vals = [daily_pee.get(d.isoformat(), 0) for d in days]
+        poop_vals = [daily_poop.get(d.isoformat(), 0) for d in days]
+        labels = [d.strftime("%d/%m") for d in days]
 
-            with st.expander(f"📄 {dt_label}  —  {summary[:80]}"):
-                # Lazy-load full report on expand
-                try:
-                    full = api.get_analysis_report(baby["id"], report_id)
-                    st.markdown(full.get("analysis", full.get("content", "No content available.")))
-                except Exception as e:
-                    st.error(f"Could not load report: {e}")
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=labels, y=pee_vals, name="💧 Pee",
+            marker_color="#60a5fa",
+        ))
+        fig.add_trace(go.Bar(
+            x=labels, y=poop_vals, name="💩 Poop",
+            marker_color="#f59e0b",
+        ))
+        fig.update_layout(
+            barmode="stack",
+            height=300,
+            margin=dict(t=8, b=0, l=0, r=0),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="count", dtick=1),
+            xaxis=dict(showgrid=False),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-                if st.button("🗑️ Delete", key=f"del_report_{report_id}"):
-                    try:
-                        api.delete_analysis_report(baby["id"], report_id)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+        recorded_days = len(set(list(daily_pee.keys()) + list(daily_poop.keys())))
+        total_changes = len([d for d in all_diapers if d["changed_at"][:10] >= start_date.isoformat()])
+        if recorded_days:
+            st.caption(f"Avg {total_changes / recorded_days:.1f} changes/day over {recorded_days} recorded days")

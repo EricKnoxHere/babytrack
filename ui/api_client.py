@@ -141,6 +141,84 @@ def get_weights(
     return _get(f"/weights/{baby_id}", params=params)
 
 
+# ── Diapers ────────────────────────────────────────────────────────────
+
+
+def add_diaper(
+    baby_id: int,
+    changed_at: str,
+    has_pee: bool = True,
+    has_poop: bool = False,
+    notes: Optional[str] = None,
+) -> dict:
+    payload: dict = {
+        "baby_id": baby_id,
+        "changed_at": changed_at,
+        "has_pee": has_pee,
+        "has_poop": has_poop,
+    }
+    if notes:
+        payload["notes"] = notes
+    return _post("/diapers", payload)
+
+
+def get_diapers(
+    baby_id: int,
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+) -> list[dict]:
+    params: dict = {}
+    if start:
+        params["start"] = start.isoformat()
+    if end:
+        params["end"] = end.isoformat()
+    return _get(f"/diapers/{baby_id}", params=params)
+
+
+def update_diaper(diaper_id: int, updates: dict) -> dict:
+    """Update a diaper record (only non-None fields)."""
+    return _request("PATCH", f"/diapers/{diaper_id}", updates)
+
+
+def delete_diaper(diaper_id: int) -> None:
+    """Delete a diaper record."""
+    resp = requests.delete(f"{API_BASE}/diapers/{diaper_id}", timeout=TIMEOUT)
+    resp.raise_for_status()
+
+
+# ── Conversations ─────────────────────────────────────────────────────
+
+
+def save_conversation(baby_id: int, title: str, messages: list[dict]) -> dict:
+    return _post("/conversations", {
+        "baby_id": baby_id,
+        "title": title,
+        "messages": messages,
+    })
+
+
+def update_conversation(conversation_id: int, title: Optional[str] = None, messages: Optional[list[dict]] = None) -> dict:
+    payload: dict = {}
+    if title is not None:
+        payload["title"] = title
+    if messages is not None:
+        payload["messages"] = messages
+    return _request("PATCH", f"/conversations/detail/{conversation_id}", payload)
+
+
+def list_conversations(baby_id: int, limit: int = 20) -> list[dict]:
+    return _get(f"/conversations/{baby_id}", params={"limit": limit})
+
+
+def get_conversation(conversation_id: int) -> dict:
+    return _get(f"/conversations/detail/{conversation_id}")
+
+
+def delete_conversation(conversation_id: int) -> None:
+    resp = requests.delete(f"{API_BASE}/conversations/detail/{conversation_id}", timeout=TIMEOUT)
+    resp.raise_for_status()
+
+
 # ── AI Analysis ────────────────────────────────────────────────────────────
 
 

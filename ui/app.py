@@ -42,6 +42,16 @@ html, body, [class*="css"] {
 .block-container { padding-top: 1.5rem; }
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
+/* Prevent chat messages from overflowing */
+[data-testid="stChatMessage"] {
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+[data-testid="stChatMessage"] pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -106,6 +116,26 @@ def _sidebar_form_weight(baby: dict):
             w_at = datetime.combine(w_date, w_time).isoformat()
             try:
                 api.add_weight(baby["id"], w_at, int(w_g), w_notes or None)
+                st.session_state._sidebar_form = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+
+def _sidebar_form_diaper(baby: dict):
+    """Render a diaper form inside the sidebar."""
+    st.markdown("**🧷 Log diaper**")
+    with st.form("sidebar_diaper_form", clear_on_submit=True):
+        d_date = st.date_input("Date", value=date.today(), key="sd_date")
+        d_time = st.time_input("Time", value=datetime.now().time(), key="sd_time")
+        d_pee = st.checkbox("💧 Pee", value=True, key="sd_pee")
+        d_poop = st.checkbox("💩 Poop", value=False, key="sd_poop")
+        d_notes = st.text_input("Notes", key="sd_notes", placeholder="optional")
+        submitted = st.form_submit_button("✅ Save", type="primary", use_container_width=True)
+        if submitted:
+            d_at = datetime.combine(d_date, d_time).isoformat()
+            try:
+                api.add_diaper(baby["id"], d_at, d_pee, d_poop, d_notes or None)
                 st.session_state._sidebar_form = None
                 st.rerun()
             except Exception as e:
@@ -187,11 +217,22 @@ with st.sidebar:
         st.session_state._sidebar_form = None if active_form == "weight" else "weight"
         st.rerun()
 
+    if st.button(
+        "✕ Close" if active_form == "diaper" else "➕ Diaper 🧷",
+        use_container_width=True,
+        type="primary" if active_form == "diaper" else "secondary",
+        key="sb_btn_diaper",
+    ):
+        st.session_state._sidebar_form = None if active_form == "diaper" else "diaper"
+        st.rerun()
+
     # Inline sidebar form
     if active_form == "feeding":
         _sidebar_form_feeding(st.session_state.selected_baby)
     elif active_form == "weight":
         _sidebar_form_weight(st.session_state.selected_baby)
+    elif active_form == "diaper":
+        _sidebar_form_diaper(st.session_state.selected_baby)
 
     if st.button("➕ New baby", use_container_width=True, key="sidebar_new_baby"):
         st.session_state._page_override = "CreateBaby"

@@ -15,7 +15,14 @@ from httpx import ASGITransport, AsyncClient
 from unittest.mock import patch, MagicMock
 
 from app.api.dependencies import db_dependency
-from app.services.database import _CREATE_ANALYSIS_REPORTS, _CREATE_BABIES, _CREATE_FEEDINGS, _CREATE_WEIGHTS
+from app.services.database import (
+    _CREATE_ANALYSIS_REPORTS,
+    _CREATE_BABIES,
+    _CREATE_CONVERSATIONS,
+    _CREATE_DIAPERS,
+    _CREATE_FEEDINGS,
+    _CREATE_WEIGHTS,
+)
 from main import app
 
 
@@ -33,6 +40,8 @@ async def mem_db():
         await conn.execute(_CREATE_FEEDINGS)
         await conn.execute(_CREATE_WEIGHTS)
         await conn.execute(_CREATE_ANALYSIS_REPORTS)
+        await conn.execute(_CREATE_DIAPERS)
+        await conn.execute(_CREATE_CONVERSATIONS)
         await conn.commit()
         yield conn
 
@@ -237,7 +246,7 @@ MOCK_ANALYSIS = (MOCK_ANALYSIS_TEXT, MOCK_SOURCES)
 
 
 async def test_analysis_day(client: AsyncClient):
-    with patch("app.api.routes.analysis.analyze_feedings", return_value=MOCK_ANALYSIS):
+    with patch("app.rag.analyzer.analyze_feedings", return_value=MOCK_ANALYSIS):
         resp = await client.get("/analysis/1?start=2025-01-15T00:00:00&end=2025-01-15T23:59:59")
     assert resp.status_code == 200
     data = resp.json()
@@ -248,7 +257,7 @@ async def test_analysis_day(client: AsyncClient):
 
 
 async def test_analysis_week(client: AsyncClient):
-    with patch("app.api.routes.analysis.analyze_feedings", return_value=MOCK_ANALYSIS):
+    with patch("app.rag.analyzer.analyze_feedings", return_value=MOCK_ANALYSIS):
         resp = await client.get("/analysis/1?start=2025-01-15T00:00:00&end=2025-01-21T23:59:59")
     assert resp.status_code == 200
     data = resp.json()
@@ -264,4 +273,208 @@ async def test_analysis_no_feedings(client: AsyncClient):
 
 async def test_analysis_baby_not_found(client: AsyncClient):
     resp = await client.get("/analysis/9999?period=day&reference_date=2025-01-15")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /diapers
+# ---------------------------------------------------------------------------
+
+async def test_add_diaper(client: AsyncClient):
+    resp = await client.post(
+        "/diapers",
+        json={
+            "baby_id": 1,
+            "changed_at": "2025-01-15T09:00:00",
+            "has_pee": True,
+            "has_poop": False,
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["has_pee"] is True
+    assert data["has_poop"] is False
+    assert data["baby_id"] == 1
+
+
+async def test_add_diaper_with_poop(client: AsyncClient):
+    resp = await client.post(
+        "/diapers",
+        json={
+            "baby_id": 1,
+            "changed_at": "2025-01-15T14:00:00",
+            "has_pee": True,
+            "has_poop": True,
+            "notes": "big one",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["has_poop"] is True
+    assert resp.json()["notes"] == "big one"
+
+
+async def test_add_diaper_unknown_baby(client: AsyncClient):
+    resp = await client.post(
+        "/diapers",
+        json={
+            "baby_id": 9999,
+            "changed_at": "2025-01-15T09:00:00",
+            "has_pee": True,
+            "has_poop": False,
+        },
+    )
+    assert resp.status_code == 404
+
+
+async def test_get_diapers_all(client: AsyncClient):
+    resp = await client.get("/diapers/1")
+    assert resp.status_code == 200
+    assert len(resp.json()) >= 2
+
+
+async def test_get_diapers_by_range(client: AsyncClient):
+    resp = await client.get("/diapers/1?start=2025-01-15&end=2025-01-15")
+    assert resp.status_code == 200
+    assert len(resp.json()) >= 2
+
+
+async def test_get_diapers_invalid_range(client: AsyncClient):
+    resp = await client.get("/diapers/1?start=2025-01-20&end=2025-01-10")
+    assert resp.status_code == 400
+
+
+async def test_get_diapers_baby_not_found(client: AsyncClient):
+    resp = await client.get("/diapers/9999")
+    assert resp.status_code == 404
+
+
+async def test_update_diaper(client: AsyncClient):
+    resp = await client.get("/diapers/1")
+    diapers = resp.json()
+    if diapers:
+        diaper_id = diapers[0]["id"]
+        resp = await client.patch(
+            f"/diapers/{diaper_id}",
+            json={"has_poop": True},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["has_poop"] is True
+
+
+async def test_update_diaper_not_found(client: AsyncClient):
+    resp = await client.patch("/diapers/9999", json={"has_pee": False})
+    assert resp.status_code == 404
+
+
+async def test_delete_diaper(client: AsyncClient):
+    # Add one to delete
+    resp = await client.post(
+        "/diapers",
+        json={
+            "baby_id": 1,
+            "changed_at": "2025-01-15T20:00:00",
+            "has_pee": True,
+            "has_poop": False,
+        },
+    )
+    diaper_id = resp.json()["id"]
+    resp = await client.delete(f"/diapers/{diaper_id}")
+    assert resp.status_code == 204
+
+
+async def test_delete_diaper_not_found(client: AsyncClient):
+    resp = await client.delete("/diapers/9999")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /conversations
+# ---------------------------------------------------------------------------
+
+async def test_create_conversation(client: AsyncClient):
+    resp = await client.post(
+        "/conversations",
+        json={
+            "baby_id": 1,
+            "title": "Morning chat",
+            "messages": [
+                {"role": "user", "content": "How is Léna?"},
+                {"role": "assistant", "content": "She's doing great!"},
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Morning chat"
+    assert len(data["messages"]) == 2
+
+
+async def test_create_conversation_unknown_baby(client: AsyncClient):
+    resp = await client.post(
+        "/conversations",
+        json={"baby_id": 9999, "title": "test", "messages": []},
+    )
+    assert resp.status_code == 404
+
+
+async def test_list_conversations(client: AsyncClient):
+    resp = await client.get("/conversations/1")
+    assert resp.status_code == 200
+    assert len(resp.json()) >= 1
+    assert resp.json()[0]["title"] == "Morning chat"
+
+
+async def test_list_conversations_baby_not_found(client: AsyncClient):
+    resp = await client.get("/conversations/9999")
+    assert resp.status_code == 404
+
+
+async def test_get_conversation_detail(client: AsyncClient):
+    # Get the conversation id from listing
+    listing = await client.get("/conversations/1")
+    conv_id = listing.json()[0]["id"]
+    resp = await client.get(f"/conversations/detail/{conv_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["title"] == "Morning chat"
+    assert len(data["messages"]) == 2
+
+
+async def test_get_conversation_not_found(client: AsyncClient):
+    resp = await client.get("/conversations/detail/9999")
+    assert resp.status_code == 404
+
+
+async def test_update_conversation(client: AsyncClient):
+    listing = await client.get("/conversations/1")
+    conv_id = listing.json()[0]["id"]
+    resp = await client.patch(
+        f"/conversations/detail/{conv_id}",
+        json={"title": "Updated title"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "Updated title"
+
+
+async def test_update_conversation_not_found(client: AsyncClient):
+    resp = await client.patch(
+        "/conversations/detail/9999",
+        json={"title": "nope"},
+    )
+    assert resp.status_code == 404
+
+
+async def test_delete_conversation(client: AsyncClient):
+    # Create and delete
+    resp = await client.post(
+        "/conversations",
+        json={"baby_id": 1, "title": "To delete", "messages": []},
+    )
+    conv_id = resp.json()["id"]
+    resp = await client.delete(f"/conversations/detail/{conv_id}")
+    assert resp.status_code == 204
+
+
+async def test_delete_conversation_not_found(client: AsyncClient):
+    resp = await client.delete("/conversations/detail/9999")
     assert resp.status_code == 404
