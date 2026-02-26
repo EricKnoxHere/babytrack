@@ -223,9 +223,10 @@ Baseline: {baseline_note}
     # ── Grounding instructions (shared) ───────────────────────────────────
     grounding = """## Instructions
 1. First, extract from the medical references above the recommended ranges for this baby's age: feeds/day, ml/feed, total ml/day, expected weight gain.
-2. Compare the baby's actual data against those reference ranges.
-3. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
-4. Do not state that data is "appropriate" or "on track" without citing the specific reference range that supports it."""
+2. When WHO and SFP give different ranges for the same metric, present the combined range (e.g. "7-12 feeds/day according to SFP and WHO guidelines"). Never cite only one source when both are relevant.
+3. Compare the baby's actual data against those reference ranges.
+4. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
+5. Do not state that data is "appropriate" or "on track" without citing the specific reference range that supports it."""
 
     # ── Report mode: structured 4-section analysis ────────────────────────
     if _is_report_request(question):
