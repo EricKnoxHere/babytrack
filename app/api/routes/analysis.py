@@ -26,6 +26,18 @@ class SourceReference(BaseModel):
     score: Optional[float] = None
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
+    chat_history: list[ChatMessage] = []
+
+
 class AnalysisResponse(BaseModel):
     baby_id: int
     baby_name: str
@@ -178,6 +190,127 @@ async def analyze_baby_feedings(
         sources=[SourceReference(**s) for s in sources],
         report_id=report.id,
     )
+
+
+@router.post("/{baby_id}/chat", response_model=AnalysisResponse)
+async def chat_with_history(
+    baby_id: int,
+    body: ChatRequest,
+    request: Request,
+    db: DbDep,
+) -> AnalysisResponse:
+    """
+    Chat endpoint that accepts conversation history for contextual follow-ups.
+    """
+    baby = await baby_service.get_baby(db, baby_id)
+    if not baby:
+        raise HTTPException(status_code=404, detail=f"Baby {baby_id} not found")
+
+    from app.rag.analyzer import AnalysisContext, _expected_feedings_per_hour, analyze_feedings
+
+    now = datetime.now()
+    end_dt = body.end or now
+    start_dt = body.start or datetime(now.year, now.month, now.day, 0, 0, 0)
+
+    if end_dt <= start_dt:
+        raise HTTPException(status_code=400, detail="'end' must be after 'start'")
+
+    is_partial = (now - end_dt).total_seconds() < _PARTIAL_THRESHOLD_MINUTES * 60
+    hours_elapsed = (end_dt - start_dt).total_seconds() / 3600
+
+    feedings = await feeding_service.get_feedings_by_datetime_range(db, baby_id, start_dt, end_dt)
+    if not feedings:
+        feedings = []
+
+    baseline_start = start_dt - timedelta(hours=hours_elapsed)
+    baseline_end = start_dt
+    baseline_feedings = await feeding_service.get_feedings_by_datetime_range(
+        db, baby_id, baseline_start, baseline_end
+    )
+    baseline_count = len(baseline_feedings)
+    baseline_volume = sum(f.quantity_ml for f in baseline_feedings)
+    same_day_baseline = baseline_start.date() == baseline_end.date()
+    baseline_label = (
+        f"{baseline_start.strftime('%d/%m %H:%M')} → {baseline_end.strftime('%H:%M')}"
+        if same_day_baseline
+        else f"{baseline_start.strftime('%d/%m %H:%M')} → {baseline_end.strftime('%d/%m %H:%M')}"
+    )
+
+    age_days = (now.date() - baby.birth_date).days
+    rate = _expected_feedings_per_hour(age_days)
+    feedings_expected = max(1, round(rate * hours_elapsed))
+
+    ctx = AnalysisContext(
+        start=start_dt,
+        end=end_dt,
+        is_partial=is_partial,
+        hours_elapsed=hours_elapsed,
+        feedings_expected=feedings_expected,
+        baseline_count=baseline_count,
+        baseline_volume_ml=baseline_volume,
+        baseline_label=baseline_label,
+    )
+
+    weights = await weight_service.get_weights_by_date_range(
+        db, baby_id, (end_dt - timedelta(days=30)).date(), end_dt.date()
+    )
+
+    rag_index = getattr(request.app.state, "rag_index", None)
+    period_label = _make_period_label(start_dt, end_dt, is_partial)
+
+    # Convert chat history to plain dicts
+    history = [{"role": m.role, "content": m.content} for m in body.chat_history]
+
+    loop = asyncio.get_event_loop()
+    analysis_text, sources = await loop.run_in_executor(
+        None,
+        partial(
+            analyze_feedings,
+            baby=baby,
+            feedings=feedings,
+            ctx=ctx,
+            index=rag_index,
+            weights=weights or None,
+            question=body.question,
+            chat_history=history,
+        ),
+    )
+
+    # Don't save chat messages as reports (only save explicit report requests)
+    report_id = None
+    if _is_report_request_label(body.question):
+        report = await report_service.save_report(
+            db=db,
+            baby_id=baby_id,
+            period_label=period_label,
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+            is_partial=is_partial,
+            analysis=analysis_text,
+            sources=sources,
+        )
+        report_id = report.id
+
+    return AnalysisResponse(
+        baby_id=baby_id,
+        baby_name=baby.name,
+        period_label=period_label,
+        start_datetime=start_dt,
+        end_datetime=end_dt,
+        is_partial=is_partial,
+        analysis=analysis_text,
+        sources=[SourceReference(**s) for s in sources],
+        report_id=report_id,
+    )
+
+
+def _is_report_request_label(question: str | None) -> bool:
+    """Check if question is a report request (mirrors analyzer logic)."""
+    if not question:
+        return True
+    q = question.lower().strip()
+    report_kw = {"analyze", "analyse", "analysis", "report", "bilan", "detailed", "rapport", "complet"}
+    return any(kw in q for kw in report_kw)
 
 
 @router.get("/{baby_id}/history", response_model=list[AnalysisReportSummary])

@@ -165,6 +165,29 @@ def get_analysis(
     return _get(f"/analysis/{baby_id}", params=params, timeout=ANALYSIS_TIMEOUT)
 
 
+def chat(
+    baby_id: int,
+    question: str,
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
+    chat_history: list[dict] | None = None,
+) -> dict:
+    """
+    Chat endpoint with conversation history for contextual follow-ups.
+    """
+    payload: dict = {"question": question}
+    if start:
+        payload["start"] = start.isoformat()
+    if end:
+        payload["end"] = end.isoformat()
+    if chat_history:
+        payload["chat_history"] = [
+            {"role": m["role"], "content": m["content"]}
+            for m in chat_history
+        ]
+    return _post(f"/analysis/{baby_id}/chat", payload, timeout=ANALYSIS_TIMEOUT)
+
+
 def list_analysis_history(baby_id: int, limit: int = 20) -> list[dict]:
     """Return the list of past analysis report summaries."""
     return _get(f"/analysis/{baby_id}/history", params={"limit": limit})

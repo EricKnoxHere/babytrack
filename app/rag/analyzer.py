@@ -262,6 +262,7 @@ def analyze_feedings(
     index_dir: Optional[Path] = None,
     weights: list[Weight] | None = None,
     question: str | None = None,
+    chat_history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
     """
     Analyses a baby's feedings via Claude + SFP RAG context.
@@ -274,6 +275,7 @@ def analyze_feedings(
         index_dir: Path to the index (if index not provided).
         weights: Recent weight measurements + notes (optional).
         question: Parent's free-text question (conversational mode).
+        chat_history: Previous conversation turns [{"role": ..., "content": ...}].
 
     Returns:
         Tuple of (analysis text, list of source dicts).
@@ -318,6 +320,21 @@ def analyze_feedings(
 
     prompt = _build_prompt(baby, feedings, rag_context, ctx, weights=weights, question=question)
 
+    # ── Build messages array (with optional conversation history) ────────
+    messages: list[dict] = []
+
+    # Include up to 6 recent turns of conversation history for context
+    if chat_history and not _is_report_request(question):
+        # Strip source footers from assistant messages to save tokens
+        for msg in chat_history[-6:]:
+            content = msg["content"]
+            if msg["role"] == "assistant" and "\n\n---\n_" in content:
+                content = content.split("\n\n---\n_")[0]
+            messages.append({"role": msg["role"], "content": content})
+
+    # Current prompt is always the last user message
+    messages.append({"role": "user", "content": prompt})
+
     # ── System message & token budget depend on mode ──────────────────────
     is_report = _is_report_request(question)
 
@@ -357,7 +374,7 @@ def analyze_feedings(
             max_tokens=max_tok,
             temperature=0.2,
             system=system_msg,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
         )
     except anthropic.BadRequestError as exc:
         if "credit balance is too low" in str(exc).lower():

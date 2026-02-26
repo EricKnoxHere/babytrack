@@ -1,22 +1,8 @@
-"""Chat — Real conversational interface with Claude."""
+"""Chat — Conversational interface with memory."""
 
 import streamlit as st
 from datetime import datetime, timedelta
 from ui import api_client as api
-
-
-# ── Welcome message shown on first load ──────────────────────────────────────
-
-def _welcome_message(baby_name: str) -> str:
-    return (
-        f"Hello! I'm here to help analyze **{baby_name}**'s feeding data. "
-        f"I have access to medical guidelines (WHO/SFP) and all recorded data.\n\n"
-        f"What would you like to know? Here are some suggestions:\n"
-        f"- 📊 **Analyze today** — How is today going so far?\n"
-        f"- 📅 **Analyze yesterday** — Full day review\n"
-        f"- 📈 **Analyze this week** — 7-day trends\n"
-        f"- ❓ Or ask me anything!"
-    )
 
 
 def render():
@@ -24,106 +10,104 @@ def render():
     if not baby:
         return
 
-    st.markdown("## 💬 Chat")
-
-    # ── Init chat history ────────────────────────────────────────────────────
+    # ── Init chat state ──────────────────────────────────────────────────────
 
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
-    # Show welcome on first visit
-    if not st.session_state.chat_messages:
-        st.session_state.chat_messages.append({
-            "role": "assistant",
-            "content": _welcome_message(baby["name"]),
-        })
+    # Reset history when baby changes
+    if st.session_state.get("_chat_baby_id") != baby["id"]:
+        st.session_state.chat_messages = []
+        st.session_state._chat_baby_id = baby["id"]
 
-    # ── Display messages ─────────────────────────────────────────────────────
+    # ── Display conversation ─────────────────────────────────────────────────
 
     for msg in st.session_state.chat_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # ── Chat input (pinned at bottom by Streamlit) ───────────────────────────
+    # ── Chat input ───────────────────────────────────────────────────────────
 
-    user_input = st.chat_input("Ask about feedings, growth, or say 'analyze today'...")
+    user_input = st.chat_input(f"Ask about {baby['name']}...")
 
     if user_input:
-        # Add user message
+        # Show user message immediately
         st.session_state.chat_messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        # Determine analysis window from user intent
-        start_dt, end_dt, label = _parse_intent(user_input)
+        # Build time window from intent
+        start_dt, end_dt = _parse_time_window(user_input)
 
-        # Call API
+        # Build history for API (only user/assistant, exclude current msg)
+        history_for_api = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.chat_messages[:-1]
+            if m["role"] in ("user", "assistant")
+        ]
+
+        # Call API with history
         with st.chat_message("assistant"):
-            with st.spinner("Analyzing..."):
+            with st.spinner("Thinking..."):
                 try:
-                    result = api.get_analysis(
+                    result = api.chat(
                         baby_id=baby["id"],
+                        question=user_input,
                         start=start_dt,
                         end=end_dt,
-                        question=user_input,
+                        chat_history=history_for_api,
                     )
 
                     response = result["analysis"]
 
-                    # Add source references
-                    if result.get("sources"):
-                        response += "\n\n---\n_📚 Sources: " + ", ".join(
-                            s["source"] for s in result["sources"]
-                        ) + "_"
+                    # Append source footer
+                    sources = result.get("sources", [])
+                    if sources:
+                        source_names = sorted(set(s["source"] for s in sources))
+                        response += "\n\n---\n_📚 Sources: " + ", ".join(source_names) + "_"
 
                     st.markdown(response)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    st.session_state.chat_messages.append(
+                        {"role": "assistant", "content": response}
+                    )
 
                 except Exception as e:
-                    error_msg = f"❌ Analysis failed: {e}"
-                    st.markdown(error_msg)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": error_msg})
+                    error_msg = f"Sorry, something went wrong: {e}"
+                    st.error(error_msg)
+                    st.session_state.chat_messages.append(
+                        {"role": "assistant", "content": error_msg}
+                    )
 
-    # ── Clear chat button (small, bottom) ────────────────────────────────────
+    # ── Clear chat ───────────────────────────────────────────────────────────
 
-    if len(st.session_state.chat_messages) > 1:
-        st.markdown("")
-        if st.button("🗑️ Clear conversation", key="clear_chat"):
+    if st.session_state.chat_messages:
+        if st.button("📝 Clear conversation", key="clear_chat"):
             st.session_state.chat_messages = []
             st.rerun()
 
 
-# ── Intent parser ────────────────────────────────────────────────────────────
+# ── Time window parser ───────────────────────────────────────────────────────
 
-def _parse_intent(text: str) -> tuple:
-    """Parse user message to determine analysis time window.
-
-    Returns (start_dt, end_dt, label).
-    Defaults to last 7 days for free-form questions.
-    """
+def _parse_time_window(text: str) -> tuple[datetime, datetime]:
+    """Extract a time window from user text. Returns (start, end)."""
     now = datetime.now()
     today_start = datetime(now.year, now.month, now.day)
     t = text.lower().strip()
 
-    # Today
     if any(w in t for w in ["today", "aujourd'hui", "ce jour", "journée"]):
-        return today_start, now, "today"
+        return today_start, now
 
-    # Yesterday
     if any(w in t for w in ["yesterday", "hier"]):
-        return today_start - timedelta(days=1), today_start, "yesterday"
+        return today_start - timedelta(days=1), today_start
 
-    # Last 3 days
     if any(w in t for w in ["3 day", "3 jour", "trois jour", "three day"]):
-        return now - timedelta(days=3), now, "3 days"
+        return now - timedelta(days=3), now
 
-    # This week / last 7 days
     if any(w in t for w in ["week", "semaine", "7 day", "7 jour"]):
-        return now - timedelta(days=7), now, "week"
+        return now - timedelta(days=7), now
 
-    # This month / last 30 days
     if any(w in t for w in ["month", "mois", "30 day", "30 jour"]):
-        return now - timedelta(days=30), now, "month"
+        return now - timedelta(days=30), now
 
-    # Default: last 7 days (gives Claude enough context for any question)
-    return now - timedelta(days=7), now, "default"
+    # Default: last 7 days
+    return now - timedelta(days=7), now
