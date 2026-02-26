@@ -8,7 +8,7 @@ import aiosqlite
 
 DATABASE_URL = os.getenv("DATABASE_URL", "data/babytrack.db")
 
-__all__ = ["DATABASE_URL", "create_tables", "get_db", "_CREATE_BABIES", "_CREATE_FEEDINGS", "_CREATE_WEIGHTS", "_CREATE_ANALYSIS_REPORTS"]
+__all__ = ["DATABASE_URL", "create_tables", "get_db", "_CREATE_BABIES", "_CREATE_FEEDINGS", "_CREATE_WEIGHTS", "_CREATE_ANALYSIS_REPORTS", "_CREATE_DIAPERS", "_CREATE_CONVERSATIONS"]
 
 _CREATE_BABIES = """
 CREATE TABLE IF NOT EXISTS babies (
@@ -58,6 +58,30 @@ CREATE TABLE IF NOT EXISTS analysis_reports (
 """
 
 
+_CREATE_DIAPERS = """
+CREATE TABLE IF NOT EXISTS diapers (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    baby_id     INTEGER NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
+    changed_at  TEXT    NOT NULL,
+    has_pee     INTEGER NOT NULL DEFAULT 1,
+    has_poop    INTEGER NOT NULL DEFAULT 0,
+    notes       TEXT,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
+_CREATE_CONVERSATIONS = """
+CREATE TABLE IF NOT EXISTS chat_conversations (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    baby_id       INTEGER NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
+    title         TEXT    NOT NULL,
+    messages_json TEXT    NOT NULL DEFAULT '[]',
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
+
 async def _migrate_analysis_reports(db: aiosqlite.Connection) -> None:
     """Recreate analysis_reports if it uses the old schema (period + no start/end cols)."""
     async with db.execute("PRAGMA table_info(analysis_reports)") as cur:
@@ -79,6 +103,8 @@ async def create_tables(db_url: str = DATABASE_URL) -> None:
         await db.execute(_CREATE_WEIGHTS)
         await _migrate_analysis_reports(db)
         await db.execute(_CREATE_ANALYSIS_REPORTS)
+        await db.execute(_CREATE_DIAPERS)
+        await db.execute(_CREATE_CONVERSATIONS)
         await db.commit()
 
 
