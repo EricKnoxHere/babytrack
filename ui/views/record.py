@@ -38,7 +38,7 @@ def render():
         icon = "🍼 Biberon" if f["feeding_type"] == "bottle" else "🤱 Allaitement"
         rows.append({
             "type": icon,
-            "date": datetime.fromisoformat(f["fed_at"]).strftime("%Y-%m-%d %H:%M"),
+            "date": datetime.fromisoformat(f["fed_at"]).strftime("%d/%m %H:%M"),
             "value": f"{f['quantity_ml']} ml",
             "notes": f.get("notes") or "",
             "_sort": f["fed_at"],
@@ -50,7 +50,7 @@ def render():
     for w in weights:
         rows.append({
             "type": "⚖️ Poids",
-            "date": datetime.fromisoformat(w["measured_at"]).strftime("%Y-%m-%d %H:%M"),
+            "date": datetime.fromisoformat(w["measured_at"]).strftime("%d/%m %H:%M"),
             "value": f"{w['weight_g']} g",
             "notes": w.get("notes") or "",
             "_sort": w["measured_at"],
@@ -65,7 +65,7 @@ def render():
         value = f"{pee}{poop}".strip() or "—"
         rows.append({
             "type": "🧷 Couche",
-            "date": datetime.fromisoformat(d["changed_at"]).strftime("%Y-%m-%d %H:%M"),
+            "date": datetime.fromisoformat(d["changed_at"]).strftime("%d/%m %H:%M"),
             "value": value,
             "notes": d.get("notes") or "",
             "_sort": d["changed_at"],
@@ -104,22 +104,30 @@ def render():
         st.session_state._editing_record = None
 
     for i, r in enumerate(rows):
-        col_type, col_date, col_val, col_notes, col_edit, col_del = st.columns(
-            [1.2, 1.5, 1, 2, 0.6, 0.6]
+        # ── Compact card: info block + action buttons ─────────────────────
+        notes_html = ""
+        if r.get("notes"):
+            notes_html = (
+                f"<div style='color:#94a3b8;font-size:0.85em;margin-top:2px'>"
+                f"{r['notes']}</div>"
+            )
+        st.markdown(
+            f"<div style='margin-bottom:2px'>"
+            f"<span style='font-weight:600'>{r['type']}</span>"
+            f" · <span style='color:#64748b;font-size:0.9em'>{r['date']}</span>"
+            f" · <strong>{r['value']}</strong>"
+            f"{notes_html}</div>",
+            unsafe_allow_html=True,
         )
-        with col_type:
-            st.markdown(r["type"])
-        with col_date:
-            st.markdown(r["date"])
-        with col_val:
-            st.markdown(f"**{r['value']}**")
-        with col_notes:
-            st.markdown(r["notes"] if r["notes"] else "—")
-        with col_edit:
+
+        c1, c2 = st.columns(2)
+        with c1:
             if st.button("✏️", key=f"edit_{i}", help="Modifier"):
-                st.session_state._editing_record = i if st.session_state._editing_record != i else None
+                st.session_state._editing_record = (
+                    i if st.session_state._editing_record != i else None
+                )
                 st.rerun()
-        with col_del:
+        with c2:
             if st.button("🗑️", key=f"del_{i}", help="Supprimer"):
                 try:
                     if r["_kind"] == "feeding":
@@ -128,21 +136,22 @@ def render():
                         api.delete_diaper(r["_id"])
                     else:
                         resp = requests.delete(
-                            f"{api.API_BASE}/weights/{r['_id']}", timeout=api.TIMEOUT
+                            f"{api.API_BASE}/weights/{r['_id']}",
+                            timeout=api.TIMEOUT,
                         )
                         resp.raise_for_status()
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erreur : {e}")
 
-        # ── Inline edit form ─────────────────────────────────────────────────
+        # ── Inline edit form ─────────────────────────────────────────────
         if st.session_state._editing_record == i:
             _render_edit_form(r, i, baby)
 
         # Subtle separator
         if i < len(rows) - 1:
             st.markdown(
-                "<hr style='margin:0;border:none;border-top:1px solid #f1f5f9'>",
+                "<hr style='margin:4px 0;border:none;border-top:1px solid #f1f5f9'>",
                 unsafe_allow_html=True,
             )
 

@@ -67,8 +67,8 @@ def render():
 
     if not st.session_state.chat_messages:
         st.markdown(
-            "<div style='text-align:center;padding:60px 0 20px'>"
-            "<span style='font-size:2.5rem'>✨</span></div>",
+            "<div style='text-align:center;padding:20px 0 10px'>"
+            "<span style='font-size:2rem'>✨</span></div>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -77,7 +77,7 @@ def render():
             unsafe_allow_html=True,
         )
         st.markdown(
-            "<p style='text-align:center;color:#94a3b8;margin-bottom:40px'>"
+            "<p style='text-align:center;color:#94a3b8;margin-bottom:20px'>"
             "Alimentation, poids, couches, santé…</p>",
             unsafe_allow_html=True,
         )
@@ -89,16 +89,11 @@ def render():
             "Tendances de la semaine",
         ]
 
-        # Spacer
-        st.markdown("<div style='min-height:120px'></div>", unsafe_allow_html=True)
-
         st.caption("Suggestions")
         suggestion_clicked = None
-        cols = st.columns(2)
         for idx, sug in enumerate(suggestions):
-            with cols[idx % 2]:
-                if st.button(sug, key=f"sug_{idx}", use_container_width=True):
-                    suggestion_clicked = sug
+            if st.button(sug, key=f"sug_{idx}", use_container_width=True):
+                suggestion_clicked = sug
 
         if suggestion_clicked:
             st.session_state.chat_messages.append(

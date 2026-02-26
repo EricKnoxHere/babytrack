@@ -41,8 +41,8 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] { background: #fafbfc; }
 .block-container { padding-top: 1rem; }
 [data-testid="stMainBlockContainer"] { margin-top: 1rem; }
-/* Hide Deploy button and kebab menu, keep sidebar toggle visible */
-[data-testid="stToolbar"] [data-testid="stToolbarActions"] { display: none !important; }
+/* Hide Deploy button and main menu — keep sidebar toggle visible */
+.stDeployButton, [data-testid="stStatusWidget"], #MainMenu { display: none !important; }
 /* Hide Streamlit auto-detected page nav */
 [data-testid="stSidebarNav"] { display: none !important; }
 /* Prevent chat messages from overflowing */
@@ -54,6 +54,12 @@ html, body, [class*="css"] {
 [data-testid="stChatMessage"] pre {
     white-space: pre-wrap;
     word-break: break-all;
+}
+/* ── Mobile optimizations ── */
+@media (max-width: 768px) {
+    .block-container { padding: 0.5rem 1rem !important; }
+    [data-testid="stMainBlockContainer"] { margin-top: 0.5rem; }
+    [data-testid="metric-container"] { padding: 10px; }
 }
 </style>
 """, unsafe_allow_html=True)
