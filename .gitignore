@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-data/*.db
 .DS_Store
 .env
 RAG_PROJECT_CONTEXT.md
