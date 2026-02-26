@@ -63,6 +63,37 @@ def _expected_feedings_per_hour(age_days: int) -> float:
         return 5 / 24
 
 
+# Pre-merged WHO + SFP norms (min of both minimums, max of both maximums)
+_MERGED_NORMS = {
+    # (age_label, feeds_min, feeds_max, ml_per_feed_min, ml_per_feed_max)
+    "0-1 month":  (7, 12, 60, 90),
+    "1-2 months": (6, 8, 90, 150),
+    "2-4 months": (5, 7, 120, 210),
+    "4-6 months": (4, 6, 150, 210),
+}
+
+
+def _merged_norms_for_age(age_days: int) -> str:
+    """Return a pre-merged WHO+SFP norm string for the baby's age bracket."""
+    if age_days < 30:
+        key = "0-1 month"
+    elif age_days < 60:
+        key = "1-2 months"
+    elif age_days < 120:
+        key = "2-4 months"
+    else:
+        key = "4-6 months"
+    fmin, fmax, mlmin, mlmax = _MERGED_NORMS[key]
+    total_min = fmin * mlmin
+    total_max = fmax * mlmax
+    return (
+        f"Combined WHO + SFP norms for {key}: "
+        f"{fmin}–{fmax} feeds/day, "
+        f"{mlmin}–{mlmax} ml per feed, "
+        f"~{total_min}–{total_max} ml/day total."
+    )
+
+
 # ─── Summarisers ──────────────────────────────────────────────────────────────
 
 def _summarize_feedings(feedings: list[Feeding]) -> str:
@@ -204,17 +235,20 @@ Baseline: {baseline_note}
 
     # ── Expected norms (safety net from computed data) ─────────────────────
     feeds_per_day_expected = round(_expected_feedings_per_hour(age_days) * 24)
-    norms_note = f"Age-based estimate: ~{feeds_per_day_expected} feeds/day for a {age_str} old infant."
+    merged_norms = _merged_norms_for_age(age_days)
+    norms_note = f"{merged_norms}"
 
     # ── Data block: references FIRST, then baby data ──────────────────────
-    data_block = f"""## Medical reference context (WHO / SFP)
+    data_block = f"""## Pre-merged reference norms (use these as the authoritative ranges)
+{merged_norms}
+
+## Additional medical context (WHO / SFP source excerpts)
 {rag_context}
 
 ## Baby profile
 - Name: {baby.name}
 - Age: {age_str} ({age_days} days)
 - Birth weight: {baby.birth_weight_grams} g
-- {norms_note}
 {weight_section}
 {temporal_section}
 {context_section}## Feeding data — {ctx.start.strftime('%d/%m/%Y %H:%M')} to {ctx.end.strftime('%d/%m/%Y %H:%M')}
@@ -222,11 +256,11 @@ Baseline: {baseline_note}
 
     # ── Grounding instructions (shared) ───────────────────────────────────
     grounding = """## Instructions
-1. First, extract from the medical references above the recommended ranges for this baby's age: feeds/day, ml/feed, total ml/day, expected weight gain.
-2. When WHO and SFP give different ranges for the same metric, present the combined range (e.g. "7-12 feeds/day according to SFP and WHO guidelines"). Never cite only one source when both are relevant.
-3. Compare the baby's actual data against those reference ranges.
-4. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
-5. Do not state that data is "appropriate" or "on track" without citing the specific reference range that supports it."""
+1. Use the **Pre-merged reference norms** section above as the authoritative ranges. Do NOT pick ranges from a single source — the merged norms already combine WHO and SFP.
+2. Compare the baby's actual data against those merged reference ranges.
+3. If any metric is below the recommended minimum, flag it clearly — never tell a parent a below-minimum value is normal.
+4. Do not state that data is "appropriate" or "on track" without citing the specific reference range that supports it.
+5. When citing ranges, say "according to WHO and SFP guidelines" — never attribute to only one source."""
 
     # ── Report mode: structured 4-section analysis ────────────────────────
     if _is_report_request(question):
