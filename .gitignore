@@ -1,11 +1,27 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
 .DS_Store
+
+# Secrets
 .env
-RAG_PROJECT_CONTEXT.md
-logs.txt
-/screenshots/
+
+# Data & generated artifacts
 data/*.db
+data/index/
+logs.txt
+
+# Eval results (keep .gitkeep)
+evals/results/*.json
+
+# Project docs (local only)
+RAG_PROJECT_CONTEXT.md
+/screenshots/

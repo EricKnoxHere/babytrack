@@ -24,12 +24,14 @@ The real point isn't the app. It's what building it required me to think about:
 | Feature | What you can do |
 |---------|-----------------|
 | **📝 Feeding log** | Record bottle/breastfeeding with timestamps, volumes, notes. Edit or delete any entry. |
+| **🩲 Diaper tracking** | Log diaper changes (wet, soiled, mixed) with timestamps and notes. |
 | **⚖️ Weight tracking** | Log growth checkpoints. View historical data and trends. |
+| **💬 AI chat** | Conversational interface to ask questions about your baby's patterns, grounded in medical guidelines via RAG. |
 | **📊 Analytics** | Visualise 7–30 day feeding patterns: volume trends, frequency, type breakdown. |
 | **📥 CSV export** | Download all feeding data for external analysis or sharing. |
 | **🤖 AI analysis** | Claude-powered recommendations grounded in WHO/SFP guidelines via RAG. Shows which medical documents were cited. |
 | **✅ Quality evaluation** | LLM-as-judge framework scores output quality. Demonstrates RAG value vs baseline. |
-| **🔌 REST API** | Full CRUD on babies, feedings, weights. OpenAPI auto-docs. Production-ready async architecture. |
+| **🔌 REST API** | Full CRUD on babies, feedings, weights, diapers, conversations. OpenAPI auto-docs. Production-ready async architecture. |
 
 ---
 
@@ -53,8 +55,11 @@ The real point isn't the app. It's what building it required me to think about:
 │  SQLite           │     │         RAG PIPELINE               │
 │  ─────────────── │     │                                   │
 │  babies           │     │  data/docs/                       │
-│  feedings         │     │  ├── who_infant_feeding.md        │
-└───────────────────┘     │  └── sfp_infant_feeding_guide.md  │
+│  feedings         │     │  └── sfp_guide_alimentation_      │
+│  diapers          │     │      nourrisson.md                │
+│  weights          │     │                                   │
+│  conversations    │     │                                   │
+└───────────────────┘     │                                   │
                           │           │                        │
                           │    LlamaIndex VectorStoreIndex     │
                           │    (BAAI/bge-small-en-v1.5)       │
@@ -114,7 +119,7 @@ This is a portfolio demo, but the architecture decisions reflect real deployment
 
 | Concern | Decision made | Enterprise path |
 |---------|--------------|-----------------|
-| **Data isolation** | SQLite per deployment | Swap to PostgreSQL; one schema per tenant |
+| **Data isolation** | SQLite per deployment | PostgreSQL + one schema per tenant for multi-tenancy |
 | **Hallucination risk** | RAG-grounded prompts + structural output format | Eval suite + human review for high-stakes outputs |
 | **Observability** | Structured logging, token counts captured | Feed into Datadog / CloudWatch |
 | **Auth** | Not implemented | Add OAuth2 / SSO at the API gateway layer |
@@ -123,15 +128,17 @@ This is a portfolio demo, but the architecture decisions reflect real deployment
 
 ---
 
-## Features added in v0.4
+## Changelog highlights
 
 - ✅ **Full CRUD for feedings** — create, read, update, delete with inline edit forms
+- ✅ **Diaper tracking** — log diaper changes (wet, soiled, mixed) with timestamps
 - ✅ **Weight tracking** — record growth checkpoints, view history
-- ✅ **CSV export** — download feeding data for external analysis
+- ✅ **AI chat** — conversational interface grounded in medical guidelines via RAG
+- ✅ **CSV import/export** — import data from CSV, download feeding data for analysis
 - ✅ **RAG source attribution** — see which medical guideline each recommendation comes from
-- ✅ **Streamlit UI overhaul** — custom theme, responsive layout, edit/delete buttons, tabs for different data types
+- ✅ **Streamlit UI** — custom theme, responsive layout, mobile-optimised sidebar
 - ✅ **Eval framework** — LLM-as-judge scoring on 5 criteria; RAG vs baseline comparison
-- ✅ **README rewrite** — SA/business-focused narrative + architecture diagrams
+- ✅ **Self-hosted deployment** — ngrok tunnel with static domain for remote access
 
 ---
 
@@ -161,15 +168,19 @@ API docs: **http://localhost:8000/docs**
 
 ```bash
 pytest tests/ -v
-# 74 tests · 0 failures · zero network calls
+# 151 tests · 0 failures · zero network calls
 ```
 
 | Suite | Tests | What's covered |
 |-------|-------|---------------|
-| Data layer — Feedings | 21 | CRUD, filtering by day/range, cascade deletes |
-| Data layer — Weights | 9 | Add, get, update, delete, range queries |
-| RAG pipeline | 18 | Indexer, retriever, analyzer (MockEmbedding + mock Anthropic) |
-| FastAPI | 20+ | Feedings, weights, babies, analysis endpoints; PATCH/DELETE |
+| FastAPI endpoints | 44 | Babies, feedings, diapers, weights, analysis, conversations |
+| RAG pipeline | 34 | Indexer, retriever, analyzer (MockEmbedding + mock Anthropic) |
+| Diapers | 18 | CRUD, filtering by day/range, cascade deletes |
+| Feedings | 15 | CRUD, filtering by day/range, cascade deletes |
+| Conversations | 13 | Create, list, messages, context management |
+| Weights | 9 | Add, get, update, delete, range queries |
+| Reports | 9 | Daily/weekly report generation and caching |
+| Babies | 9 | CRUD, cascade deletes, validation |
 
 ---
 
@@ -179,18 +190,22 @@ pytest tests/ -v
 babytrack/
 ├── main.py                  # FastAPI entry point + lifespan
 ├── app/
-│   ├── models/              # Pydantic v2 — Baby, Feeding
+│   ├── models/              # Pydantic v2 — Baby, Feeding, Diaper, Weight
 │   ├── services/            # Async CRUD (aiosqlite)
 │   ├── rag/                 # LlamaIndex — indexer, retriever, analyzer
-│   └── api/routes/          # health, babies, feedings, analysis
+│   └── api/routes/          # babies, feedings, diapers, weights, analysis, chat
 ├── evals/                   # LLM-as-judge eval framework
 │   ├── eval_analysis.py     # 3 scenarios · 5 criteria · RAG vs baseline
-│   └── results/             # JSON results per run
+│   └── results/             # JSON results per run (gitignored)
+├── scripts/
+│   ├── start_tunnel.sh      # Launch API + UI + ngrok tunnel
+│   └── import_*.py          # CSV data import utilities
 ├── ui/
 │   ├── app.py               # Streamlit dashboard
-│   └── api_client.py        # HTTP wrapper
+│   ├── api_client.py        # HTTP wrapper
+│   └── views/               # Home, Record, Chat pages
 └── data/
-    ├── docs/                # WHO/SFP medical guidelines (markdown)
+    ├── docs/                # SFP medical guidelines (markdown)
     └── index/               # Persisted vector index (gitignored)
 ```
 
@@ -201,7 +216,7 @@ babytrack/
 | Decision | Rationale |
 |----------|-----------|
 | **FastAPI** | Native async, auto OpenAPI, Pydantic validation — what most enterprise Python teams are standardising on |
-| **SQLite + aiosqlite** | Zero-config for a demo; same service layer works with PostgreSQL |
+| **SQLite + aiosqlite** | Zero-config, portable, self-contained — ideal for self-hosted deployment |
 | **LlamaIndex** | Mature RAG abstraction with index persistence — not reinventing retrieval |
 | **BAAI/bge-small-en-v1.5** | 130 MB, runs offline, multilingual — no embedding API dependency |
 | **Structured prompt output** | Fixed markdown sections make parsing and eval deterministic |
@@ -209,15 +224,17 @@ babytrack/
 
 ---
 
-## Deployment (Render)
+## Self-hosted deployment (ngrok)
 
-`render.yaml` is included — two services (API + UI), auto-deployed from GitHub.
+The app runs locally and is exposed via an ngrok tunnel with a static domain:
 
 ```bash
-# Fork → connect Render → "New Blueprint" → add ANTHROPIC_API_KEY → deploy
+# One command to start API + UI + tunnel
+./scripts/start_tunnel.sh
+# → https://<your-domain>.ngrok-free.dev
 ```
 
-> ⚠️ Free tier uses ephemeral storage. For persistence, swap SQLite for Render PostgreSQL (one config change in `database.py`).
+Requires a free [ngrok account](https://ngrok.com/) with a static domain configured. Set `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` in `.env`.
 
 ---
 
