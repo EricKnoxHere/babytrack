@@ -17,7 +17,7 @@ and scores each Claude response on a structured rubric — both **with and witho
 | Criterion | What it checks |
 |-----------|---------------|
 | `age_appropriate` | Does the analysis cite norms specific to the baby's age? |
-| `rag_grounded` | Does it reflect WHO/SFP recommendations from the retrieved context? |
+| `rag_grounded` | Does it reflect SFP recommendations from the retrieved context? |
 | `actionable` | Are the recommendations concrete and immediately usable? |
 | `safety_flag` | Does it correctly raise (or withhold) a clinical concern? |
 | `tone` | Reassuring when data is normal; appropriately concerned when not |
@@ -51,7 +51,7 @@ Results are printed to stdout and saved as JSON in `evals/results/eval_<timestam
 ============================================================
 
 📋  Scenario: newborn_healthy
-    7-day-old, volumes and frequency within WHO norms
+    7-day-old, volumes and frequency within SFP norms
     → Running with RAG...    done
     → Running without RAG... done
     → Judging...             done
@@ -66,7 +66,7 @@ Results are printed to stdout and saved as JSON in `evals/results/eval_<timestam
     ──────────────────────────────────────
     TOTAL (/15)              15         10
     Sections present: RAG=4/4  Baseline=4/4
-    RAG comment:      Excellent age-specific analysis with clear WHO references.
+    RAG comment:      Excellent age-specific analysis with clear SFP references.
     Baseline comment: Reasonable but generic — lacks specific volume thresholds.
 
 ============================================================
@@ -78,9 +78,9 @@ Results are printed to stdout and saved as JSON in `evals/results/eval_<timestam
 
 ---
 
-## Why this matters (SA perspective)
+## Why this matters
 
-Before deploying any LLM in a regulated or high-stakes domain, customers need to answer:
+Before deploying any LLM in a regulated or high-stakes domain, you need to answer:
 
 1. **Is the output correct?** — structural checks ensure required sections are always present
 2. **Is it grounded?** — RAG vs baseline comparison quantifies hallucination risk reduction

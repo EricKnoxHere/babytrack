@@ -1,7 +1,6 @@
 # 🍼 BabyTrack
 
-> **Portfolio project — Solutions Architect @ Anthropic**
-> Demonstrating how RAG + Claude can be deployed responsibly in a regulated, high-stakes domain.
+An infant tracking app that doesn't just store data — it analyses it, grounded in official paediatric guidelines via RAG, and surfaces personalised recommendations via Claude.
 
 ---
 
@@ -9,13 +8,13 @@
 
 A paediatrician has limited time. A new parent has infinite anxiety. There's a gap.
 
-BabyTrack closes it: an infant feeding tracker that doesn't just store data, but analyses it — grounded in WHO and SFP medical guidelines — and surfaces personalised, actionable recommendations via Claude.
+BabyTrack closes it: log feedings, diapers, and weight — then ask questions in natural language. Claude answers grounded in SFP (Société Française de Pédiatrie) guidelines, not generic knowledge.
 
-The real point isn't the app. It's what building it required me to think about:
+Building it meant thinking about:
 
 - How do you ground an LLM in a specific knowledge base without hallucination risk?
 - How do you measure whether the grounding actually helps?
-- How do you build an API that an enterprise team could extend, not just a demo that runs on localhost?
+- How do you design an async API that could scale beyond a single deployment?
 
 ---
 
@@ -29,7 +28,7 @@ The real point isn't the app. It's what building it required me to think about:
 | **💬 AI chat** | Conversational interface to ask questions about your baby's patterns, grounded in medical guidelines via RAG. |
 | **📊 Analytics** | Visualise 7–30 day feeding patterns: volume trends, frequency, type breakdown. |
 | **📥 CSV export** | Download all feeding data for external analysis or sharing. |
-| **🤖 AI analysis** | Claude-powered recommendations grounded in WHO/SFP guidelines via RAG. Shows which medical documents were cited. |
+| **🤖 AI analysis** | Claude-powered recommendations grounded in SFP guidelines via RAG. Shows which medical documents were cited. |
 | **✅ Quality evaluation** | LLM-as-judge framework scores output quality. Demonstrates RAG value vs baseline. |
 | **🔌 REST API** | Full CRUD on babies, feedings, weights, diapers, conversations. OpenAPI auto-docs. Production-ready async architecture. |
 
@@ -57,12 +56,9 @@ The real point isn't the app. It's what building it required me to think about:
 │  babies           │     │  data/docs/                       │
 │  feedings         │     │  └── sfp_guide_alimentation_      │
 │  diapers          │     │      nourrisson.md                │
-│  weights          │     │                                   │
-│  conversations    │     │                                   │
-└───────────────────┘     │                                   │
-                          │           │                        │
-                          │    LlamaIndex VectorStoreIndex     │
-                          │    (BAAI/bge-small-en-v1.5)       │
+│  weights          │     │           │                        │
+│  conversations    │     │    LlamaIndex VectorStoreIndex     │
+└───────────────────┘     │    (BAAI/bge-small-en-v1.5)       │
                           │           │  top-k chunks          │
                           │           ▼                        │
                           │  ┌─────────────────────┐          │
@@ -74,7 +70,7 @@ The real point isn't the app. It's what building it required me to think about:
 
 ### Why RAG here?
 
-A generic LLM knows roughly what WHO recommendations say. A RAG-grounded LLM cites the *specific thresholds and intervals* from the actual guidelines — the difference between "drink more water" and "a 7-day-old should receive 60–90 ml per feed every 2–3 hours."
+A generic LLM knows roughly what paediatric guidelines say. A RAG-grounded LLM cites the *specific thresholds and intervals* from the actual SFP document — the difference between "feed regularly" and "a 7-day-old should receive 60–90 ml per feed every 2–3 hours."
 
 In a regulated domain (medical, legal, financial), that precision gap is the entire value proposition of RAG.
 
@@ -89,7 +85,7 @@ The `evals/` folder answers this. An LLM-as-judge script runs 3 clinical scenari
 | Criterion | What it checks |
 |-----------|---------------|
 | `age_appropriate` | References norms specific to the baby's age |
-| `rag_grounded` | Reflects retrieved WHO/SFP guidelines, not generic knowledge |
+| `rag_grounded` | Reflects retrieved SFP guidelines, not generic knowledge |
 | `actionable` | Recommendations are concrete and immediately usable |
 | `safety_flag` | Correctly raises or withholds a clinical concern |
 | `tone` | Reassuring when warranted; appropriately concerned when not |
@@ -238,5 +234,4 @@ Requires a free [ngrok account](https://ngrok.com/) with a static domain configu
 
 ---
 
-*Built as part of an SA Applied AI portfolio — Anthropic Paris.*
-*The goal was not to build a baby app. The goal was to build something that shows how I think about RAG architecture, eval, and production deployment.*
+*Built for my daughter. Designed like I'd design it for a customer.*
