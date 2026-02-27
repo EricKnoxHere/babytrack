@@ -16,7 +16,7 @@ from app.api.routes import (
     analysis_router, babies_router, conversations_router,
     diapers_router, feedings_router, health_router, weights_router,
 )
-from app.services.database import create_tables, init_pool, close_pool
+from app.services.database import create_tables
 
 # Do NOT import RAG at startup (sentence-transformers + torch = 600MB+)
 INDEX_DIR = Path(os.getenv("INDEX_DIR", "data/index"))
@@ -31,10 +31,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database and load the RAG index at startup."""
-    # Database — connection pool + tables
-    await init_pool()
+    # Database
     await create_tables()
-    logger.info("PostgreSQL pool initialized, tables created")
+    logger.info("SQLite tables initialized")
 
     # RAG index — mark for lazy loading
     # Do NOT attempt to load at startup (can timeout on cold start)
@@ -44,8 +43,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown — close connection pool
-    await close_pool()
+    # Shutdown — nothing to release for now
     logger.info("BabyTrack API stopped")
 
 

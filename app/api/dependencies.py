@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Annotated, Optional
 
-import asyncpg
+import aiosqlite
 from fastapi import Depends, Request
 
 from app.services.database import get_db as _get_db
@@ -13,13 +13,13 @@ from app.services.database import get_db as _get_db
 logger = logging.getLogger(__name__)
 
 
-async def db_dependency() -> AsyncGenerator[asyncpg.Connection, None]:
-    """Provide a PostgreSQL connection for the duration of the request."""
+async def db_dependency() -> AsyncGenerator[aiosqlite.Connection, None]:
+    """Provide a SQLite connection for the duration of the request."""
     async with _get_db() as conn:
         yield conn
 
 
-DbDep = Annotated[asyncpg.Connection, Depends(db_dependency)]
+DbDep = Annotated[aiosqlite.Connection, Depends(db_dependency)]
 
 
 def get_rag_index(request: Request):

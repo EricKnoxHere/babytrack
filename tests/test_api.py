@@ -1,17 +1,15 @@
 """FastAPI integration tests.
 
 Strategy:
-- Shared PostgreSQL connection for all tests in the module (requires DATABASE_URL).
+- Shared in-memory SQLite database for all tests in the module.
 - Real app lifespan (main.py) — DB dependency is overridden.
 - analyze_feedings is mocked to avoid calling Claude / the network.
 """
 
 from __future__ import annotations
 
-import os
-
 import pytest
-import asyncpg
+import aiosqlite
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from unittest.mock import patch, MagicMock
@@ -27,39 +25,30 @@ from app.services.database import (
 )
 from main import app
 
-_TEST_DSN = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL", "")
-
 
 # ---------------------------------------------------------------------------
-# Fixture: shared PostgreSQL connection for the entire module
+# Fixture: shared in-memory SQLite for the entire module
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(scope="module")
 async def mem_db():
-    """PostgreSQL connection, reused across all module tests with rollback."""
-    if not _TEST_DSN:
-        pytest.skip("No TEST_DATABASE_URL or DATABASE_URL set — skipping API tests")
-
-    conn = await asyncpg.connect(_TEST_DSN)
-    tr = conn.transaction()
-    await tr.start()
-
-    await conn.execute(_CREATE_BABIES)
-    await conn.execute(_CREATE_FEEDINGS)
-    await conn.execute(_CREATE_WEIGHTS)
-    await conn.execute(_CREATE_ANALYSIS_REPORTS)
-    await conn.execute(_CREATE_DIAPERS)
-    await conn.execute(_CREATE_CONVERSATIONS)
-
-    yield conn
-
-    await tr.rollback()
-    await conn.close()
+    """In-memory SQLite connection, reused across all module tests."""
+    async with aiosqlite.connect(":memory:") as conn:
+        conn.row_factory = aiosqlite.Row
+        await conn.execute("PRAGMA foreign_keys = ON")
+        await conn.execute(_CREATE_BABIES)
+        await conn.execute(_CREATE_FEEDINGS)
+        await conn.execute(_CREATE_WEIGHTS)
+        await conn.execute(_CREATE_ANALYSIS_REPORTS)
+        await conn.execute(_CREATE_DIAPERS)
+        await conn.execute(_CREATE_CONVERSATIONS)
+        await conn.commit()
+        yield conn
 
 
 @pytest_asyncio.fixture(scope="module")
-async def client(mem_db: asyncpg.Connection):
-    """HTTP test client with PostgreSQL DB and mocked RAG."""
+async def client(mem_db: aiosqlite.Connection):
+    """HTTP test client with in-memory DB and mocked RAG."""
 
     async def override_db():
         yield mem_db

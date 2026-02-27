@@ -3,26 +3,28 @@
 import json
 from datetime import datetime
 
-import asyncpg
+import aiosqlite
 
 
 async def save_conversation(
-    db: asyncpg.Connection,
+    db: aiosqlite.Connection,
     baby_id: int,
     title: str,
     messages: list[dict],
 ) -> dict:
     """Save or create a conversation. Returns the saved record."""
-    row = await db.fetchrow(
+    messages_json = json.dumps(messages, ensure_ascii=False)
+    cursor = await db.execute(
         """INSERT INTO chat_conversations (baby_id, title, messages_json)
-           VALUES ($1, $2, $3::jsonb) RETURNING *""",
-        baby_id, title, json.dumps(messages, ensure_ascii=False),
+           VALUES (?, ?, ?)""",
+        (baby_id, title, messages_json),
     )
-    return _row_to_dict(row)
+    await db.commit()
+    return await get_conversation(db, cursor.lastrowid)
 
 
 async def update_conversation(
-    db: asyncpg.Connection,
+    db: aiosqlite.Connection,
     conversation_id: int,
     title: str | None = None,
     messages: list[dict] | None = None,
@@ -30,80 +32,75 @@ async def update_conversation(
     """Update an existing conversation's title and/or messages."""
     fields = []
     values = []
-    idx = 1
     if title is not None:
-        fields.append(f"title = ${idx}")
+        fields.append("title = ?")
         values.append(title)
-        idx += 1
     if messages is not None:
-        fields.append(f"messages_json = ${idx}::jsonb")
+        fields.append("messages_json = ?")
         values.append(json.dumps(messages, ensure_ascii=False))
-        idx += 1
     if not fields:
         return await get_conversation(db, conversation_id)
 
-    fields.append(f"updated_at = ${idx}")
-    values.append(datetime.now())
-    idx += 1
+    fields.append("updated_at = ?")
+    values.append(datetime.now().isoformat())
     values.append(conversation_id)
 
-    query = f"UPDATE chat_conversations SET {', '.join(fields)} WHERE id = ${idx} RETURNING *"
-    row = await db.fetchrow(query, *values)
-    return _row_to_dict(row) if row else None
+    query = f"UPDATE chat_conversations SET {', '.join(fields)} WHERE id = ?"
+    await db.execute(query, values)
+    await db.commit()
+    return await get_conversation(db, conversation_id)
 
 
-async def get_conversation(db: asyncpg.Connection, conversation_id: int) -> dict | None:
+async def get_conversation(db: aiosqlite.Connection, conversation_id: int) -> dict | None:
     """Return a full conversation by id."""
-    row = await db.fetchrow(
-        "SELECT * FROM chat_conversations WHERE id = $1", conversation_id
-    )
+    async with db.execute(
+        "SELECT * FROM chat_conversations WHERE id = ?", (conversation_id,)
+    ) as cur:
+        row = await cur.fetchone()
     if not row:
         return None
     return _row_to_dict(row)
 
 
 async def list_conversations(
-    db: asyncpg.Connection, baby_id: int, limit: int = 20
+    db: aiosqlite.Connection, baby_id: int, limit: int = 20
 ) -> list[dict]:
     """Return conversation summaries for a baby, most recent first."""
-    rows = await db.fetch(
+    rows = await db.execute_fetchall(
         """SELECT id, baby_id, title, created_at, updated_at
            FROM chat_conversations
-           WHERE baby_id = $1
+           WHERE baby_id = ?
            ORDER BY updated_at DESC
-           LIMIT $2""",
-        baby_id, limit,
+           LIMIT ?""",
+        (baby_id, limit),
     )
     return [
         {
             "id": r["id"],
             "baby_id": r["baby_id"],
             "title": r["title"],
-            "created_at": r["created_at"].isoformat() if isinstance(r["created_at"], datetime) else r["created_at"],
-            "updated_at": r["updated_at"].isoformat() if isinstance(r["updated_at"], datetime) else r["updated_at"],
+            "created_at": r["created_at"],
+            "updated_at": r["updated_at"],
         }
         for r in rows
     ]
 
 
-async def delete_conversation(db: asyncpg.Connection, conversation_id: int) -> bool:
+async def delete_conversation(db: aiosqlite.Connection, conversation_id: int) -> bool:
     """Delete a conversation. Returns True if deleted."""
-    result = await db.execute(
-        "DELETE FROM chat_conversations WHERE id = $1", conversation_id
+    cursor = await db.execute(
+        "DELETE FROM chat_conversations WHERE id = ?", (conversation_id,)
     )
-    return result == "DELETE 1"
+    await db.commit()
+    return cursor.rowcount > 0
 
 
-def _row_to_dict(row: asyncpg.Record) -> dict:
-    messages = row["messages_json"]
-    # asyncpg may return JSONB as already-parsed Python object or as string
-    if isinstance(messages, str):
-        messages = json.loads(messages)
+def _row_to_dict(row: aiosqlite.Row) -> dict:
     return {
         "id": row["id"],
         "baby_id": row["baby_id"],
         "title": row["title"],
-        "messages": messages,
-        "created_at": row["created_at"].isoformat() if isinstance(row["created_at"], datetime) else row["created_at"],
-        "updated_at": row["updated_at"].isoformat() if isinstance(row["updated_at"], datetime) else row["updated_at"],
+        "messages": json.loads(row["messages_json"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
     }
